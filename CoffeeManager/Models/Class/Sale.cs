@@ -1,23 +1,53 @@
 ﻿using System;
-using System;
 using System.Collections.Generic;
-using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 
 namespace CoffeeManager.Models.Class
 {
+    /// <summary>
+    /// Represents a sale made in the coffee shop. (≧◡≦) ZORRODEV2026
+    /// </summary>
     internal class Sale
     {
-        public int Id { get; set; }
-        public DateTime Date { get; set; }
-        public Employee Employee { get; set; }
-        public List<SaleDetail> Details { get; set; }
-        public decimal Total { get; set; }
+        #region DATA (✿◠‿◠)
 
-        public Sale()
+        /// <summary>
+        /// Unique identifier for the sale. (◕‿◕✿)
+        /// </summary>
+        public int Id { get; set; }
+
+        /// <summary>
+        /// ID of the employee who made the sale. (✧ω✧)
+        /// </summary>
+        public int EmployeeId { get; set; }
+
+        /// <summary>
+        /// Date and time of the sale. (≧◡≦)
+        /// </summary>
+        public DateTime Date { get; set; }
+
+        /// <summary>
+        /// List of sale details (products + quantities). (ಠ‿ಠ)
+        /// </summary>
+        public List<SaleDetail> Details { get; set; } = new();
+
+        /// <summary>
+        /// Total amount of the sale. (ง'̀-'́)ง ZORRODEV2026
+        /// </summary>
+        public decimal Total => CalculateTotal();
+
+        #endregion
+
+        #region METHODS (ง'̀-'́)ง
+
+        /// <summary>
+        /// Calculates the total amount of the sale. (◕‿◕✿)
+        /// </summary>
+        public decimal CalculateTotal()
         {
-            Details = new List<SaleDetail>();
+            return Details.Sum(d => d.CalculateSubtotal());
         }
+
+        #endregion
     }
 }
-
