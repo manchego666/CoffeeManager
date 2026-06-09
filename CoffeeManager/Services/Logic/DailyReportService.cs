@@ -1,6 +1,9 @@
-﻿using System;
+﻿using CoffeeManager.Services;
+using System;
 using System.IO;
 using System.Text;
+using CoffeeManager.Services.Logic;
+using System.Windows.Forms;
 
 namespace CoffeeManager.Models.Class
 {
@@ -23,6 +26,35 @@ namespace CoffeeManager.Models.Class
         }
 
         #endregion
+
+        public void GenerateDailyReport(Store store)
+        {
+            try
+            {
+                var report = new DailyReport
+                {
+                    Date = DateTime.Now,
+                    TotalSales = store.Sales.Sum(s => s.Total),
+                    TotalTransactions = store.Sales.Count,
+                    Employees = store.Employees.Count,
+                    Products = store.Products.Count
+                };
+
+                File.WriteAllText(PathService.DailyReport,
+                    $"Corte Diario - {report.Date}\n" +
+                    $"Ventas Totales: {report.TotalSales:C}\n" +
+                    $"Transacciones: {report.TotalTransactions}\n" +
+                    $"Empleados: {report.Employees}\n" +
+                    $"Productos: {report.Products}\n");
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error generando corte diario:\n" + ex.Message);
+            }
+        }
+
+
 
         #region SAVE TO FILE (✧ω✧)
 

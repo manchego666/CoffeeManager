@@ -1,67 +1,36 @@
-// ===============================================================
-//  ZORRODEV 2026 — Main Form Engine
-//  Authors: Christopher (≧◡≦), Daniel (ง'̀-'́)ง, Brayan (✧ω✧), Jesús (◕‿◕✿)
-//  Description: Main application window with animated hamburger menu,
-//               dynamic module loading, real KPIs and live notifications.
-// ===============================================================
-
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CoffeeManager.Models.Class;
 using CoffeeManager.Services;
 using CoffeeManager.Services.Logic;
 
-// Force correct Timer type
+// Timer correcto
 using Timer = System.Windows.Forms.Timer;
 
 namespace CoffeeManager.Front
 {
-    /// <summary>
-    /// Main application window with animated hamburger menu,
-    /// dynamic module loading, responsive dashboards, and fluid UI transitions.
-    /// ZORRODEV 2026 — Premium Performance Edition.
-    /// </summary>
     public class FormMain : Form
     {
-        #region === DATA & SERVICES [ZORRODEV 2026] ===
-
-        /// <summary>
-        /// Central in-memory store for products, employees, sales and warehouse. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: DATA & SERVICES
+        // ===========================================================
         private readonly Store _store = new();
-
-        /// <summary>
-        /// JSON helper for loading and saving data. (≧◡≦)
-        /// </summary>
         private readonly JsonService _jsonService = new();
-
-        /// <summary>
-        /// Service used to generate daily TXT reports. (≧◡≦)
-        /// </summary>
         private readonly DailyReportService _dailyReportService = new();
-
-        /// <summary>
-        /// Handles login persistence and validation. (≧◡≦)
-        /// </summary>
         private readonly LoginService _loginService;
-
-        /// <summary>
-        /// Centralized notification engine for dashboard alerts. (✧ω✧)
-        /// </summary>
         private readonly NotificationService _notificationService = new();
 
-        #endregion
+        // ===========================================================
+        //  REGION: UI FIELDS
+        // ===========================================================
+        private BufferedPanel panelMenu;
+        private BufferedPanel panelContent;
 
-        #region === UI FIELDS [ZORRODEV 2026] ===
-
-        private Panel panelMenu = null!;
-        private Panel panelContent = null!;
         private FlowLayoutPanel rootPanel = null!;
-
         private Panel panelSubEmployees = null!;
         private Panel panelSubWarehouse = null!;
         private Panel panelSubProducts = null!;
@@ -85,115 +54,91 @@ namespace CoffeeManager.Front
 
         private const int MenuExpandedWidth = 230;
         private const int MenuCollapsedWidth = 60;
-        private const int AnimationStep = 25;
+        private const int AnimationStep = 40;
 
-        #endregion
-
-        #region === PERFORMANCE BOOSTERS [ZORRODEV 2026] ===
-
-        /// <summary>
-        /// Enables WS_EX_COMPOSITED to reduce flickering on complex layouts. (✧ω✧)
-        /// </summary>
+        // ===========================================================
+        //  REGION: PERFORMANCE
+        // ===========================================================
         protected override CreateParams CreateParams
         {
             get
             {
-                CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED (Elimina parpadeos por completo)
-                return cp;
+                // No WS_EX_COMPOSITED (causa paneles negros)
+                return base.CreateParams;
             }
         }
 
-        #endregion
-
-        #region === CONSTRUCTOR [ZORRODEV 2026] ===
-
-        /// <summary>
-        /// Initializes the main form, services, layout and dashboard. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: CONSTRUCTOR
+        // ===========================================================
         public FormMain()
         {
             Text = "CoffeeManager PRO";
             StartPosition = FormStartPosition.CenterScreen;
-
-            // Professional wide default size
             MinimumSize = new Size(1280, 800);
             Size = new Size(1366, 840);
 
+            // DoubleBuffer REAL
             SetStyle(ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
+
             DoubleBuffered = true;
+            UpdateStyles();
 
-            Icon = Properties.Resources.logo_ico;
-            _loginService = new LoginService("Data/login.json");
-
-            InitializeSlideTimer();
             InitializeLayout();
+            InitializeSlideTimer();
 
-            // Load real data into Store and show real dashboard
+            typeof(Panel).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.SetProperty |
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic,
+                null, panelContent, new object[] { true });
+
             LoadStoreData();
             LoadDashboardModule();
         }
 
-        #endregion
-
-        #region === DATA LOADING (STORE + NOTIFICATIONS) ===
-
-        /// <summary>
-        /// Loads products, employees, sales and warehouse from JSON into the Store. (≧◡≦)
-        /// </summary>
-        private void LoadStoreData()
-        {
-            try
-            {
-                _store.Products = _jsonService.Load<Product>(PathService.Products);
-                _store.Employees = _jsonService.Load<Employee>(PathService.Employees);
-                _store.Sales = _jsonService.Load<Sale>(PathService.Sales);
-
-                var warehouse = _jsonService.LoadObject<Warehouse>("Data/warehouse.json");
-                if (warehouse != null)
-                    _store.Warehouse = warehouse;
-            }
-            catch
-            {
-                // For the final project we keep it silent; could log in a real system.
-            }
-        }
-
-        #endregion
-
-        #region === INITIALIZE LAYOUT (MENU + CONTENT) ===
-
-        /// <summary>
-        /// Builds the left hamburger menu and the main content panel. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: INITIALIZE LAYOUT (OPTIMIZADO)
+        // ===========================================================
         private void InitializeLayout()
         {
-            BackgroundImage = Properties.Resources.bg_main;
-            BackgroundImageLayout = ImageLayout.Stretch;
+            // Fondo del formulario
+            this.BackgroundImage = Properties.Resources.bg_main;
+            this.BackgroundImageLayout = ImageLayout.Stretch;
 
-            // === Left Menu Panel (Rosa Traslúcido Premium) ===
-            panelMenu = new Panel
+            // ============================
+            // PANEL MENU (IZQUIERDA)
+            // ============================
+            panelMenu = new BufferedPanel
             {
                 Dock = DockStyle.Left,
                 Width = MenuExpandedWidth,
-                BackColor = Color.FromArgb(235, 255, 230, 235) // Rosa suave traslúcido refinado
+                BackColor = Color.FromArgb(235, 255, 230, 235)
             };
-            Controls.Add(panelMenu);
 
-            // === Content Panel ===
-            panelContent = new Panel
+            Controls.Add(panelMenu);
+            panelMenu.BringToFront();
+
+            // ============================
+            // PANEL CONTENT (CENTRO)
+            // ============================
+            panelContent = new BufferedPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.Transparent,
-                Padding = new Padding(30, 25, 30, 25) // Margen de seguridad física absoluto
+                Padding = new Padding(0)
             };
-            Controls.Add(panelContent);
 
+            Controls.Add(panelContent);
+            panelContent.BringToFront();
+
+            // ============================
+            // BOTÓN HAMBURGUESA
+            // ============================
             int y = 15;
 
-            // === Hamburger Button ===
             btnToggleMenu = new Button
             {
                 Text = "☰",
@@ -201,9 +146,9 @@ namespace CoffeeManager.Front
                 Height = 40,
                 Location = new Point(10, y),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(240, 128, 148), // Tonalidad rosa del prototipo
+                BackColor = Color.FromArgb(240, 128, 148),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnToggleMenu.FlatAppearance.BorderSize = 0;
@@ -212,7 +157,9 @@ namespace CoffeeManager.Front
 
             y += 55;
 
-            // === Main Navigation Buttons ===
+            // ============================
+            // BOTONES PRINCIPALES
+            // ============================
             btnHome = CreateMainButton("Inicio", Properties.Resources.logo_icon, ref y);
             btnHome.Click += (s, e) =>
             {
@@ -224,85 +171,59 @@ namespace CoffeeManager.Front
             };
 
             btnEmployees = CreateMainButton("Empleados", Properties.Resources.logo_icon, ref y);
-            btnEmployees.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubEmployees); };
+            btnEmployees.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubEmployees);
+            };
 
             btnWarehouse = CreateMainButton("Almacén", Properties.Resources.icon_inventory, ref y);
-            btnWarehouse.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubWarehouse); };
+            btnWarehouse.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubWarehouse);
+            };
 
             btnProducts = CreateMainButton("Productos", Properties.Resources.icon_inventory, ref y);
-            btnProducts.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubProducts); };
+            btnProducts.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubProducts);
+            };
 
             btnSales = CreateMainButton("Ventas", Properties.Resources.icon_sales, ref y);
-            btnSales.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubSales); };
+            btnSales.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubSales);
+            };
 
             btnReports = CreateMainButton("Reportes", Properties.Resources.icon_reports, ref y);
-            btnReports.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubReports); };
+            btnReports.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubReports);
+            };
 
             btnSettings = CreateMainButton("Configuración", Properties.Resources.icon_settings, ref y);
-            btnSettings.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubSettings); };
+            btnSettings.Click += (s, e) =>
+            {
+                if (isMenuExpanded && !isAnimating)
+                    ShowSubmenu(panelSubSettings);
+            };
 
+            // Submenús
             CreateSubmenus();
 
-            // === Exit Button con Icono Limpio ===
-            btnExit = new Button
-            {
-                Text = string.Empty,
-                AccessibleName = "Salir",
-                Tag = Properties.Resources.icon_exit,
-                Width = MenuExpandedWidth - 20,
-                Height = 40,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(240, 240, 240),
-                ForeColor = Color.FromArgb(40, 40, 40),
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Location = new Point(10, panelMenu.Height - 55),
-                Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
-                Cursor = Cursors.Hand
-            };
-            btnExit.FlatAppearance.BorderSize = 0;
-            btnExit.Click += (s, e) => Close();
-
-            btnExit.Paint += (sender, pe) =>
-            {
-                Button b = (Button)sender;
-                pe.Graphics.SmoothingMode = SmoothingMode.HighQuality;
-                Image img = b.Tag as Image;
-
-                if (img != null)
-                {
-                    int iconSize = 22;
-                    int iconY = (b.Height - iconSize) / 2;
-
-                    if (b.Width <= MenuCollapsedWidth)
-                    {
-                        int iconX = (b.Width - iconSize) / 2;
-                        pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
-                    }
-                    else
-                    {
-                        int iconX = 12;
-                        pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
-
-                        int textX = iconX + iconSize + 12;
-                        using (Brush brush = new SolidBrush(b.ForeColor))
-                        {
-                            StringFormat sf = new StringFormat
-                            {
-                                LineAlignment = StringAlignment.Center,
-                                Alignment = StringAlignment.Near
-                            };
-                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush,
-                                new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
-                        }
-                    }
-                }
-            };
-            panelMenu.Controls.Add(btnExit);
+            // ============================
+            // BOTÓN SALIR
+            // ============================
+            btnExit = CreateExitButton(ref y);
+            panelMenu.Controls.Add(btnExit); 
         }
 
-        /// <summary>
-        /// Creates a main navigation button with icon + text and custom painting. (≧◡≦)
-        /// </summary>
+
+
         private Button CreateMainButton(string text, Image icon, ref int y)
         {
             var btn = new Button
@@ -319,6 +240,7 @@ namespace CoffeeManager.Front
                 Font = new Font("Segoe UI", 11, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
+
             btn.FlatAppearance.BorderSize = 0;
 
             btn.Paint += (sender, pe) =>
@@ -329,7 +251,7 @@ namespace CoffeeManager.Front
                 Image img = b.Tag as Image;
                 if (img != null)
                 {
-                    int iconSize = 22;
+                    int iconSize = 32; // ICONOS GRANDES
                     int iconY = (b.Height - iconSize) / 2;
 
                     if (b.Width <= MenuCollapsedWidth)
@@ -350,8 +272,14 @@ namespace CoffeeManager.Front
                                 LineAlignment = StringAlignment.Center,
                                 Alignment = StringAlignment.Near
                             };
-                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush,
-                                new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
+
+                            pe.Graphics.DrawString(
+                                b.AccessibleName,
+                                b.Font,
+                                brush,
+                                new Rectangle(textX, 0, b.Width - textX, b.Height),
+                                sf
+                            );
                         }
                     }
                 }
@@ -364,68 +292,95 @@ namespace CoffeeManager.Front
             return btn;
         }
 
-        #endregion
 
-        #region === DYNAMIC DASHBOARD (INICIO PERFECTO) ===
 
-        /// <summary>
-        /// Builds the main dashboard (Inicio) with real KPIs and notifications. (≧◡≦)
-        /// </summary>
-        private void LoadDashboardModule()
+
+        // ===========================================================
+        //  REGION: DATA LOADING
+        // ===========================================================
+        private void LoadStoreData()
+        {
+            try
+            {
+                _store.Products = _jsonService.Load<Product>(PathService.Products);
+                _store.Employees = _jsonService.Load<Employee>(PathService.Employees);
+                _store.Sales = _jsonService.Load<Sale>(PathService.Sales);
+
+                var warehouse = _jsonService.LoadObject<Warehouse>("Data/warehouse.json");
+                if (warehouse != null)
+                    _store.Warehouse = warehouse;
+            }
+            catch
+            {
+                // Silent fail
+            }
+        }
+
+        // ===========================================================
+        //  REGION: DASHBOARD MODULE (OPTIMIZADO)
+        // ===========================================================
+        private async void LoadDashboardModule()
         {
             panelContent.Controls.Clear();
+            panelContent.BackColor = Color.FromArgb(1, 0, 0, 0); // Transparencia falsa
 
-            // FlowLayoutPanel principal
+
             rootPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
                 Padding = new Padding(10, 5, 10, 10),
-                BackColor = Color.Transparent
-            };
-            rootPanel.GetType()
-                .GetProperty("DoubleBuffered",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                ?.SetValue(rootPanel, true, null);
+                BackColor = Color.FromArgb(1, 0, 0, 0)
 
-            // --- Header Section ---
+            };
+
+            var panelCenter = new FlowLayoutPanel
+            {
+                Width = 1100,
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                BackColor = Color.FromArgb(1, 0, 0, 0)
+            };
+
+            // ============================
+            // HEADER
+            // ============================
             var panelHeader = new FlowLayoutPanel
             {
-                Width = 1000,
-                Height = 65,
-                BackColor = Color.Transparent,
-                FlowDirection = FlowDirection.LeftToRight,
-                Margin = new Padding(0, 0, 0, 15)
+                Width = 1100,
+                Height = 120,
+                BackColor = Color.Transparent
             };
 
-            var picHeaderLogo = new PictureBox
+            var picLogo = new PictureBox
             {
                 Image = Properties.Resources.logo_icon,
+                Size = new Size(110, 110),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Size = new Size(55, 55),
-                Margin = new Padding(0, 0, 15, 0)
+                Margin = new Padding(0, 0, 25, 0)
             };
 
             var lblTitle = new Label
             {
                 Text = "Inicio",
-                Font = new Font("Segoe UI", 26, FontStyle.Bold),
+                Font = new Font("Segoe UI", 38, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true,
-                Anchor = AnchorStyles.Left
+                Margin = new Padding(10, 30, 20, 0)
             };
 
-            // Refresh button (top-right of header)
             var btnRefresh = new Button
             {
-                Text = "Actualizar",
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Size = new Size(110, 32),
-                FlatStyle = FlatStyle.Flat,
+                Text = "Actualizar Dashboard",
+                Size = new Size(200, 45),
                 BackColor = Color.FromArgb(240, 128, 148),
                 ForeColor = Color.White,
-                Margin = new Padding(40, 18, 0, 0),
-                Cursor = Cursors.Hand
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(20, 40, 0, 0)
             };
             btnRefresh.FlatAppearance.BorderSize = 0;
             btnRefresh.Click += (s, e) =>
@@ -434,229 +389,211 @@ namespace CoffeeManager.Front
                 LoadDashboardModule();
             };
 
-            panelHeader.Controls.Add(picHeaderLogo);
-            panelHeader.Controls.Add(lblTitle);
-            panelHeader.Controls.Add(btnRefresh);
-            rootPanel.SetFlowBreak(panelHeader, true);
-            rootPanel.Controls.Add(panelHeader);
+            panelHeader.Controls.AddRange(new Control[] { picLogo, lblTitle, btnRefresh });
+            panelCenter.Controls.Add(panelHeader);
 
-            // --- Subtítulo Resumen Diario ---
-            var lblResumenTitle = new Label
-            {
-                Text = "Resumen Diario",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.White,
-                Size = new Size(1000, 30),
-                Margin = new Padding(0, 0, 0, 10)
-            };
-            rootPanel.SetFlowBreak(lblResumenTitle, true);
-            rootPanel.Controls.Add(lblResumenTitle);
-
-            // === REAL KPIs FROM STORE ===
+            // ============================
+            // KPI DATA
+            // ============================
             decimal ventasHoy = _store.Sales
                 .Where(s => s.Date.Date == DateTime.Today)
                 .Sum(s => s.Total);
 
             int productosActivos = _store.Products.Count;
             int recetas = _store.Products.Count(p => p.UsesWarehouse);
-            int empleadosActivos = _store.Employees.Count(e => e.Active);
+            int insumos = _store.Warehouse.Items.Count;
 
-            // --- KPI CARDS ---
-            var panelMetricsGroup = new FlowLayoutPanel
+            int prodAgotados = _store.Products.Count(p => !p.UsesWarehouse && p.Stock <= 0);
+            int ingAgotados = _store.Warehouse.Items.Count(i => i.IsOutOfStock());
+            string stockTexto = (prodAgotados + ingAgotados == 0)
+                ? "Sin bajos"
+                : $"{prodAgotados + ingAgotados} Agotados";
+
+            // ============================
+            // KPI CARDS
+            // ============================
+            var flowMetrics = new FlowLayoutPanel
             {
-                Width = 1020,
-                Height = 115,
-                Margin = new Padding(0, 0, 0, 30),
+                Width = 1100,
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0, 20, 0, 20)
+            };
+
+            flowMetrics.Controls.Add(CreateKpiCard("Ventas Hoy", $"$ {ventasHoy:F2}", Color.FromArgb(240, 128, 148)));
+            flowMetrics.Controls.Add(CreateKpiCard("Productos Activos", $"{productosActivos}", Color.FromArgb(70, 180, 160)));
+            flowMetrics.Controls.Add(CreateKpiCard("Insumos en Almacén", $"{insumos}", Color.FromArgb(100, 150, 220)));
+            flowMetrics.Controls.Add(CreateKpiCard("Recetas", $"{recetas}", Color.FromArgb(120, 180, 240)));
+            flowMetrics.Controls.Add(CreateKpiCard("Stock Bajo / Agotado", stockTexto, Color.FromArgb(220, 60, 60)));
+            flowMetrics.Controls.Add(CreateKpiCard("Personal Activo", $"{_store.Employees.Count}", Color.FromArgb(255, 180, 80)));
+            flowMetrics.Controls.Add(CreateKpiCard("Mermas", $"0", Color.FromArgb(180, 80, 255)));
+            flowMetrics.Controls.Add(CreateKpiCard("Pérdidas", $"0", Color.FromArgb(255, 100, 100)));
+
+            panelCenter.Controls.Add(flowMetrics);
+
+            // ============================
+            // NOTIFICATIONS
+            // ============================
+            var panelBottom = new FlowLayoutPanel
+            {
+                Width = 1100,
+                Height = 300,
                 BackColor = Color.Transparent
             };
-            rootPanel.SetFlowBreak(panelMetricsGroup, true);
 
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Ventas Hoy", $"$ {ventasHoy:F2}", Color.FromArgb(240, 128, 148)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Productos", $"{productosActivos} Activos", Color.FromArgb(70, 180, 160)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Recetas", $"{recetas} Registros", Color.FromArgb(100, 150, 220)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Empleados", $"{empleadosActivos} Personal", Color.FromArgb(220, 160, 90)));
-            rootPanel.Controls.Add(panelMetricsGroup);
-
-            // --- ACCIONES RÁPIDAS ---
-            var panelActions = new FlowLayoutPanel
+            var btnCorte = new Button
             {
-                Width = 460,
-                Height = 320,
-                BackColor = Color.Transparent,
-                FlowDirection = FlowDirection.TopDown,
-                Margin = new Padding(0, 0, 40, 0)
-            };
-
-            var lblActionsTitle = new Label
-            {
-                Text = "Acciones Rápidas",
-                Font = new Font("Segoe UI", 15, FontStyle.Bold),
+                Text = "Realizar Corte de Caja",
+                Size = new Size(350, 60),
+                BackColor = Color.FromArgb(240, 128, 148),
                 ForeColor = Color.White,
-                Size = new Size(450, 35)
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
             };
-            panelActions.Controls.Add(lblActionsTitle);
-            panelActions.Controls.Add(CreateQuickActionButton("Nuevo Pedido"));
-            panelActions.Controls.Add(CreateQuickActionButton("Revisar Inventario"));
-            panelActions.Controls.Add(CreateQuickActionButton("Corte de Caja"));
-            rootPanel.Controls.Add(panelActions);
+            btnCorte.FlatAppearance.BorderSize = 0;
 
-            // --- NOTIFICACIONES RECIENTES (REALES) ---
-            var panelNotifications = new Panel
+            var panelNotif = new Panel
             {
-                Width = 480,
-                Height = 265,
-                BackColor = Color.FromArgb(248, 248, 248),
+                Size = new Size(600, 260),
+                BackColor = Color.White,
                 Padding = new Padding(15),
-                Margin = new Padding(0, 5, 0, 0)
+                BorderStyle = BorderStyle.FixedSingle
             };
 
-            var lblNotifTitle = new Label
+            panelNotif.Controls.Add(new Label
             {
                 Text = "Notificaciones Recientes",
-                Font = new Font("Segoe UI", 13, FontStyle.Bold),
-                ForeColor = Color.Black,
-                Location = new Point(15, 15),
-                Size = new Size(250, 25)
-            };
-            panelNotifications.Controls.Add(lblNotifTitle);
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Location = new Point(10, 10),
+                AutoSize = true
+            });
 
-            int notifY = 55;
-
-            List<Notification> notifications = _notificationService.LoadNotifications()
+            int yNotif = 45;
+            var notificaciones = _notificationService
+                .LoadNotifications()
                 .OrderByDescending(n => n.Date)
                 .Take(6)
                 .ToList();
 
-            if (notifications.Count == 0)
+            if (notificaciones.Count == 0)
             {
-                AddNotificationItem(panelNotifications,
-                    "Sistema",
-                    "No hay notificaciones registradas todavía. (≧◡≦)",
-                    ref notifY);
+                AddNotificationItem(panelNotif, "Sistema", "No hay novedades por ahora (≧◡≦)", ref yNotif);
             }
             else
             {
-                foreach (var n in notifications)
-                {
-                    string title = $"{n.Title} — {n.Date:HH:mm}";
-                    AddNotificationItem(panelNotifications, title, n.Detail, ref notifY);
-                }
+                foreach (var n in notificaciones)
+                    AddNotificationItem(panelNotif, n.Title, n.Detail, ref yNotif);
             }
 
-            rootPanel.Controls.Add(panelNotifications);
+            panelBottom.Controls.AddRange(new Control[] { btnCorte, panelNotif });
+            panelCenter.Controls.Add(panelBottom);
 
+            rootPanel.Controls.Add(panelCenter);
             panelContent.Controls.Add(rootPanel);
+
+            // Fade‑in suave sin flicker
+            await FadeInControl(panelCenter, 300);
         }
 
-        /// <summary>
-        /// Creates a KPI card with title, value and accent color. (≧◡≦)
-        /// </summary>
+        private async Task FadeInControl(Control ctrl, int durationMs)
+        {
+            ctrl.Visible = false;
+            await Task.Delay(50);
+            ctrl.Visible = true;
+        }
+
         private Panel CreateKpiCard(string title, string value, Color accentColor)
         {
             var card = new Panel
             {
-                Size = new Size(220, 105),
+                Size = new Size(250, 120),
                 BackColor = Color.White,
-                Margin = new Padding(0, 0, 20, 0)
+                Margin = new Padding(10),
+                Padding = new Padding(0)
             };
 
-            var borderLine = new Panel { Dock = DockStyle.Top, Height = 4, BackColor = accentColor };
-            card.Controls.Add(borderLine);
+            card.Controls.Add(new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 6,
+                BackColor = accentColor
+            });
 
-            var lblValue = new Label
+            card.Controls.Add(new Label
             {
                 Text = value,
-                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
                 ForeColor = Color.Black,
-                Location = new Point(10, 15),
-                Size = new Size(200, 40),
+                Location = new Point(0, 30),
+                Size = new Size(250, 40),
                 TextAlign = ContentAlignment.MiddleCenter
-            };
-            card.Controls.Add(lblValue);
+            });
 
-            var lblTitle = new Label
+            card.Controls.Add(new Label
             {
                 Text = title,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Font = new Font("Segoe UI", 10),
                 ForeColor = Color.DimGray,
-                Location = new Point(10, 60),
-                Size = new Size(200, 25),
+                Location = new Point(0, 75),
+                Size = new Size(250, 20),
                 TextAlign = ContentAlignment.MiddleCenter
-            };
-            card.Controls.Add(lblTitle);
+            });
 
             return card;
         }
 
-        /// <summary>
-        /// Creates a quick action button with hover effects. (≧◡≦)
-        /// </summary>
-        private Button CreateQuickActionButton(string text)
-        {
-            var btn = new Button
-            {
-                Text = text,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Size = new Size(450, 55),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                ForeColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0, 12, 0, 0),
-                Cursor = Cursors.Hand
-            };
-            btn.FlatAppearance.BorderSize = 0;
-            btn.Click += (s, e) =>
-                MessageBox.Show($"{text} se encuentra actualmente en desarrollo.",
-                    "Módulo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(240, 128, 148);
-            btn.MouseLeave += (s, e) => btn.BackColor = Color.White;
-            return btn;
-        }
-
-        /// <summary>
-        /// Adds a notification row with icon + text to the notifications panel. (≧◡≦)
-        /// </summary>
         private void AddNotificationItem(Panel parent, string title, string detail, ref int y)
         {
-            var picIcon = new PictureBox
+            var bubble = new Panel
+            {
+                Width = parent.Width - 30,
+                Height = 45,
+                BackColor = Color.FromArgb(250, 250, 250),
+                Location = new Point(10, y),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var pic = new PictureBox
             {
                 Image = Properties.Resources.logo_icon,
-                Size = new Size(32, 32),
-                Location = new Point(15, y + 4),
+                Size = new Size(28, 28),
+                Location = new Point(8, 8),
                 SizeMode = PictureBoxSizeMode.Zoom
             };
 
-            var lblItem = new Label
+            var lbl = new Label
             {
-                Text = $"• [{title}] {detail}",
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = Color.FromArgb(70, 70, 70),
-                Location = new Point(55, y),
-                Size = new Size(400, 40),
-                TextAlign = ContentAlignment.MiddleLeft
+                Text = $"[{title}] {detail}",
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(45, 12),
+                AutoSize = true
             };
 
-            parent.Controls.Add(picIcon);
-            parent.Controls.Add(lblItem);
-            y += 45;
+            bubble.Controls.Add(pic);
+            bubble.Controls.Add(lbl);
+            parent.Controls.Add(bubble);
+
+            y += 50;
         }
 
-        #endregion
 
-        #region === SUBMENUS ===
-
-        /// <summary>
-        /// Creates all submenu panels and their buttons. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: SUBMENUS
+        // ===========================================================
         private void CreateSubmenus()
         {
             panelSubEmployees = CreateSubmenuPanelBelow(btnEmployees);
-            AddSubButton(panelSubEmployees, "Agregar empleado", (s, e) => LoadPlaceholder("Agregar Empleado"));
-            AddSubButton(panelSubEmployees, "Administrar empleados", (s, e) => LoadPlaceholder("Administrar Empleados"));
+            AddSubButton(panelSubEmployees, "Agregar empleado",
+             (s, e) => LoadModule(new UsersModule(_store)));
+
+            AddSubButton(panelSubEmployees, "Administrar empleados",
+                (s, e) => LoadModule(new UsersPanelModule(_store)));
+
+
 
             panelSubWarehouse = CreateSubmenuPanelBelow(btnWarehouse);
-            AddSubButton(panelSubWarehouse, "Inventario", (s, e) => LoadPlaceholder("Administrar Inventario"));
+            AddSubButton(panelSubWarehouse, "Inventario", (s, e) => LoadPlaceholder("Inventario"));
             AddSubButton(panelSubWarehouse, "Agregar insumo", (s, e) => LoadPlaceholder("Agregar Insumo"));
             AddSubButton(panelSubWarehouse, "Recetas", (s, e) => LoadPlaceholder("Recetas"));
 
@@ -682,9 +619,6 @@ namespace CoffeeManager.Front
             HideAllSubmenus();
         }
 
-        /// <summary>
-        /// Creates a submenu panel positioned below a parent button. (≧◡≦)
-        /// </summary>
         private Panel CreateSubmenuPanelBelow(Button parent)
         {
             var panel = new Panel
@@ -694,14 +628,12 @@ namespace CoffeeManager.Front
                 Location = new Point(10, parent.Bottom),
                 BackColor = Color.FromArgb(245, 245, 245)
             };
+
             panelMenu.Controls.Add(panel);
             panel.BringToFront();
             return panel;
         }
 
-        /// <summary>
-        /// Adds a submenu button to a submenu panel. (≧◡≦)
-        /// </summary>
         private void AddSubButton(Panel parent, string text, EventHandler onClick)
         {
             int y = parent.Controls.Count * 35;
@@ -718,15 +650,14 @@ namespace CoffeeManager.Front
                 ForeColor = Color.Black,
                 Cursor = Cursors.Hand
             };
+
             btn.FlatAppearance.BorderSize = 0;
             ApplyHoverSub(btn);
             btn.Click += onClick;
+
             parent.Controls.Add(btn);
         }
 
-        /// <summary>
-        /// Shows a specific submenu and hides the others. (≧◡≦)
-        /// </summary>
         private void ShowSubmenu(Panel submenu)
         {
             if (!submenu.Visible)
@@ -738,9 +669,6 @@ namespace CoffeeManager.Front
             else submenu.Visible = false;
         }
 
-        /// <summary>
-        /// Hides all submenu panels. (≧◡≦)
-        /// </summary>
         private void HideAllSubmenus()
         {
             if (panelSubEmployees != null) panelSubEmployees.Visible = false;
@@ -751,113 +679,131 @@ namespace CoffeeManager.Front
             if (panelSubSettings != null) panelSubSettings.Visible = false;
         }
 
-        #endregion
-
-        #region === SLIDE MENU ANIMATION ===
-
-        /// <summary>
-        /// Initializes the slide animation timer. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: SLIDE MENU ANIMATION (OPTIMIZADO)
+        // ===========================================================
         private void InitializeSlideTimer()
         {
             slideTimer = new Timer { Interval = 10 };
             slideTimer.Tick += SlideTick;
         }
 
-        /// <summary>
-        /// Starts the menu expand/collapse animation. (≧◡≦)
-        /// </summary>
         private void ToggleMenu()
         {
             if (isAnimating) return;
 
             isAnimating = true;
             HideAllSubmenus();
+
             panelMenu.SuspendLayout();
             panelContent.SuspendLayout();
+
             slideTimer.Start();
         }
 
-        /// <summary>
-        /// Handles each animation step for the sliding menu. (≧◡≦)
-        /// </summary>
         private void SlideTick(object? sender, EventArgs e)
         {
             if (isMenuExpanded)
             {
                 panelMenu.Width -= AnimationStep;
+
                 if (panelMenu.Width <= MenuCollapsedWidth)
                 {
                     panelMenu.Width = MenuCollapsedWidth;
                     isMenuExpanded = false;
-                    slideTimer.Stop();
-                    CollapseMenu();
+
                     panelMenu.ResumeLayout();
                     panelContent.ResumeLayout(true);
+
+                    slideTimer.Stop();
                     isAnimating = false;
                 }
             }
             else
             {
                 panelMenu.Width += AnimationStep;
+
                 if (panelMenu.Width >= MenuExpandedWidth)
                 {
                     panelMenu.Width = MenuExpandedWidth;
                     isMenuExpanded = true;
-                    slideTimer.Stop();
-                    ExpandMenu();
+
                     panelMenu.ResumeLayout();
                     panelContent.ResumeLayout(true);
+
+                    slideTimer.Stop();
                     isAnimating = false;
                 }
             }
         }
 
-        /// <summary>
-        /// Adjusts button sizes and positions for collapsed menu. (≧◡≦)
-        /// </summary>
-        private void CollapseMenu()
+        private Button CreateExitButton(ref int y)
         {
-            btnToggleMenu.Width = MenuCollapsedWidth - 16;
-            btnToggleMenu.Location = new Point(8, btnToggleMenu.Location.Y);
-
-            foreach (Control c in panelMenu.Controls)
+            var btn = new Button
             {
-                if (c is Button btn)
+                Text = string.Empty,
+                AccessibleName = "Salir",
+                Tag = Properties.Resources.icon_exit,
+                Width = MenuExpandedWidth - 20,
+                Height = 40,
+                Location = new Point(10, y),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(50, 50, 50),
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+
+            btn.Paint += (sender, pe) =>
+            {
+                Button b = (Button)sender;
+                pe.Graphics.SmoothingMode = SmoothingMode.HighQuality;
+
+                Image img = b.Tag as Image;
+                int iconSize = 32;
+                int iconY = (b.Height - iconSize) / 2;
+
+                if (panelMenu.Width <= MenuCollapsedWidth)
                 {
-                    btn.Width = MenuCollapsedWidth - 16;
-                    btn.Location = new Point(8, btn.Location.Y);
-                    btn.Invalidate();
+                    int iconX = (b.Width - iconSize) / 2;
+                    pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
                 }
-            }
+                else
+                {
+                    int iconX = 12;
+                    pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
+
+                    int textX = iconX + iconSize + 12;
+                    using (Brush brush = new SolidBrush(b.ForeColor))
+                    {
+                        StringFormat sf = new StringFormat
+                        {
+                            LineAlignment = StringAlignment.Center,
+                            Alignment = StringAlignment.Near
+                        };
+
+                        pe.Graphics.DrawString(
+                            "Salir",
+                            b.Font,
+                            brush,
+                            new Rectangle(textX, 0, b.Width - textX, b.Height),
+                            sf
+                        );
+                    }
+                }
+            };
+
+            btn.Click += (s, e) => Close();
+
+            return btn;
         }
 
-        /// <summary>
-        /// Adjusts button sizes and positions for expanded menu. (≧◡≦)
-        /// </summary>
-        private void ExpandMenu()
-        {
-            btnToggleMenu.Width = MenuExpandedWidth - 20;
-            btnToggleMenu.Location = new Point(10, btnToggleMenu.Location.Y);
 
-            foreach (Control c in panelMenu.Controls)
-            {
-                if (c is Button btn)
-                {
-                    btn.Width = MenuExpandedWidth - 20;
-                    btn.Location = new Point(10, btn.Location.Y);
-                    btn.Invalidate();
-                }
-            }
-        }
-
-        #endregion
-
-        #region === MODULE LOADING ===
-
-        /// <summary>
-        /// Loads a module control into the main content panel. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: LOAD MODULES
+        // ===========================================================
         private void LoadModule(Control module)
         {
             panelContent.Controls.Clear();
@@ -865,75 +811,43 @@ namespace CoffeeManager.Front
             panelContent.Controls.Add(module);
         }
 
-        /// <summary>
-        /// Loads a simple placeholder panel for modules not implemented yet. (≧◡≦)
-        /// </summary>
-        private void LoadPlaceholder(string name)
+        private void LoadPlaceholder(string text)
         {
-            var p = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(40, 40, 40)
-            };
-
             var lbl = new Label
             {
-                Text = $"{name}",
+                Text = text,
+                Font = new Font("Segoe UI", 28, FontStyle.Bold),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(40, 40)
             };
-            p.Controls.Add(lbl);
 
-            LoadModule(p);
+            panelContent.Controls.Clear();
+            panelContent.Controls.Add(lbl);
         }
 
-        #endregion
-
-        #region === REPORTS ===
-
-        /// <summary>
-        /// Generates and saves a daily TXT report using DailyReportService. (≧◡≦)
-        /// </summary>
-        private void GenerateDailyReport()
-        {
-            using var dlg = new SaveFileDialog
-            {
-                Filter = "Text files|*.txt",
-                FileName = $"daily_report_{DateTime.Now:yyyyMMdd}.txt"
-            };
-
-            if (dlg.ShowDialog() == DialogResult.OK)
-            {
-                _dailyReportService.SaveDailyReportToFile(_store, DateTime.Now, dlg.FileName);
-                MessageBox.Show("¡Reporte diario generado correctamente!",
-                    "Reporte", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        #endregion
-
-        #region === HOVER EFFECTS ===
-
-        /// <summary>
-        /// Applies hover effect for main menu buttons. (≧◡≦)
-        /// </summary>
+        // ===========================================================
+        //  REGION: HOVER EFFECTS
+        // ===========================================================
         private void ApplyHover(Button btn)
         {
-            btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(220, 255, 210, 220);
+            btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(255, 150, 170);
             btn.MouseLeave += (s, e) => btn.BackColor = Color.Transparent;
         }
 
-        /// <summary>
-        /// Applies hover effect for submenu buttons. (≧◡≦)
-        /// </summary>
         private void ApplyHoverSub(Button btn)
         {
             btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(230, 230, 230);
             btn.MouseLeave += (s, e) => btn.BackColor = Color.FromArgb(245, 245, 245);
         }
 
-        #endregion
+        // ===========================================================
+        //  REGION: DAILY REPORT
+        // ===========================================================
+        private void GenerateDailyReport()
+        {
+            _dailyReportService.GenerateDailyReport(_store);
+            MessageBox.Show("Corte diario generado correctamente.", "Corte", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
     }
 }

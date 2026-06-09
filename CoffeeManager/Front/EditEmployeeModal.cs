@@ -6,11 +6,13 @@ using CoffeeManager.Models.Enums;
 
 namespace CoffeeManager.Front
 {
-    internal class UsersModule : UserControl
+    internal class EditEmployeeModal : UserControl
     {
+        private readonly Employee _emp;
         private readonly Store _store;
 
-        private Panel panelRoot = null!;
+        public event Action? OnClose;
+
         private Panel panelCard = null!;
         private PictureBox picPhoto = null!;
         private Button btnLoadPhoto = null!;
@@ -32,8 +34,9 @@ namespace CoffeeManager.Front
 
         private string? _photoPath;
 
-        public UsersModule(Store store)
+        public EditEmployeeModal(Employee emp, Store store)
         {
+            _emp = emp;
             _store = store;
 
             DoubleBuffered = true;
@@ -41,42 +44,28 @@ namespace CoffeeManager.Front
                      ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
 
+            Size = new Size(720, 520);
+            Anchor = AnchorStyles.None;
+            BackColor = Color.Transparent;
+
             InitializeLayout();
+            LoadEmployeeData();
         }
 
         private void InitializeLayout()
         {
-            BackColor = Color.FromArgb(1, 0, 0, 0);
-
-            panelRoot = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = Color.FromArgb(1, 0, 0, 0),
-                Padding = new Padding(0, 20, 0, 20)
-            };
-            Controls.Add(panelRoot);
-
             panelCard = new Panel
             {
-                Size = new Size(950, 520),
+                Size = new Size(760, 540),
                 BackColor = Color.FromArgb(235, 255, 255, 255),
                 Padding = new Padding(25)
             };
             panelCard.Paint += PanelCard_Paint;
-            panelRoot.Controls.Add(panelCard);
-
-            panelRoot.Resize += (s, e) =>
-            {
-                panelCard.Left = (panelRoot.ClientSize.Width - panelCard.Width) / 2;
-            };
-
-            panelCard.Left = (panelRoot.ClientSize.Width - panelCard.Width) / 2;
-            panelCard.Top = 40;
+            Controls.Add(panelCard);
 
             var lblTitle = new Label
             {
-                Text = "Agregar empleado",
+                Text = "Editar empleado",
                 Font = new Font("Segoe UI", 20, FontStyle.Bold),
                 ForeColor = Color.FromArgb(40, 40, 40),
                 AutoSize = true,
@@ -141,15 +130,14 @@ namespace CoffeeManager.Front
             {
                 Text = "Empleado activo",
                 Location = new Point(col1, top + rowH * 6 + 10),
-                Font = new Font("Segoe UI", 10),
-                Checked = true
+                Font = new Font("Segoe UI", 10)
             };
             panelCard.Controls.Add(chkActive);
 
             picPhoto = new PictureBox
             {
-                Size = new Size(150, 150),
-                Location = new Point(col2 + 300, top),
+                Size = new Size(140, 140),
+                Location = new Point(col2 + 200, top),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.White
             };
@@ -157,9 +145,9 @@ namespace CoffeeManager.Front
 
             btnLoadPhoto = new Button
             {
-                Text = "Cargar foto",
-                Size = new Size(150, 32),
-                Location = new Point(col2 + 300, top + 160),
+                Text = "Cambiar foto",
+                Size = new Size(140, 32),
+                Location = new Point(col2 + 200, top + 160),
                 BackColor = Color.FromArgb(240, 128, 148),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -170,29 +158,118 @@ namespace CoffeeManager.Front
 
             btnSave = new Button
             {
-                Text = "Guardar",
+                Text = "Guardar cambios",
                 Size = new Size(150, 40),
-                Location = new Point(panelCard.Width - 330, panelCard.Height - 60),
+                Location = new Point(panelCard.Width - 330, panelCard.Height - 70),
                 BackColor = Color.FromArgb(70, 180, 160),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnSave.FlatAppearance.BorderSize = 0;
-            btnSave.Click += SaveEmployee;
+            btnSave.Click += SaveChanges;
             panelCard.Controls.Add(btnSave);
 
             btnCancel = new Button
             {
                 Text = "Cancelar",
                 Size = new Size(150, 40),
-                Location = new Point(panelCard.Width - 170, panelCard.Height - 60),
+                Location = new Point(panelCard.Width - 170, panelCard.Height - 70),
                 BackColor = Color.FromArgb(220, 60, 60),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnCancel.FlatAppearance.BorderSize = 0;
-            btnCancel.Click += (s, e) => ClearForm();
+            btnCancel.Click += (s, e) => OnClose?.Invoke();
             panelCard.Controls.Add(btnCancel);
+        }
+
+        private void LoadEmployeeData()
+        {
+            txtFirstName.Text = _emp.FirstName;
+            txtLastName.Text = _emp.LastName;
+            txtCURP.Text = _emp.CURP;
+            txtRFC.Text = _emp.RFC;
+            txtAddress.Text = _emp.Address;
+            txtPhone.Text = _emp.Phone;
+            txtEmail.Text = _emp.Email;
+            dtBirth.Value = _emp.DateOfBirth;
+
+            cbGender.SelectedIndex = _emp.Gender switch
+            {
+                Gender.Male => 0,
+                Gender.Female => 1,
+                _ => 2
+            };
+
+            cbType.SelectedIndex = _emp.Type switch
+            {
+                EmployeeType.Waiter => 0,
+                EmployeeType.Barista => 1,
+                EmployeeType.Assistant => 2,
+                _ => 3
+            };
+
+            txtSalary.Text = _emp.Salary.ToString();
+            txtSSN.Text = _emp.SocialSecurityNumber;
+            chkActive.Checked = _emp.Active;
+
+            if (!string.IsNullOrWhiteSpace(_emp.PathImage) && System.IO.File.Exists(_emp.PathImage))
+                picPhoto.Image = Image.FromFile(_emp.PathImage);
+        }
+
+        private void SaveChanges(object? sender, EventArgs e)
+        {
+            _emp.FirstName = txtFirstName.Text;
+            _emp.LastName = txtLastName.Text;
+            _emp.CURP = txtCURP.Text;
+            _emp.RFC = txtRFC.Text;
+            _emp.Address = txtAddress.Text;
+            _emp.Phone = txtPhone.Text;
+            _emp.Email = txtEmail.Text;
+            _emp.DateOfBirth = dtBirth.Value;
+
+            _emp.Gender = cbGender.SelectedIndex switch
+            {
+                0 => Gender.Male,
+                1 => Gender.Female,
+                _ => Gender.NonBinary
+            };
+
+            _emp.Type = cbType.SelectedIndex switch
+            {
+                0 => EmployeeType.Waiter,
+                1 => EmployeeType.Barista,
+                2 => EmployeeType.Assistant,
+                _ => EmployeeType.Administrator
+            };
+
+            _emp.Salary = decimal.TryParse(txtSalary.Text, out var s) ? s : 0;
+            _emp.SocialSecurityNumber = txtSSN.Text;
+            _emp.Active = chkActive.Checked;
+
+            if (_photoPath != null)
+                _emp.PathImage = _photoPath;
+
+            _store.UpdateEmployee(_emp);
+
+            MessageBox.Show("Cambios guardados correctamente.", "Éxito",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            OnClose?.Invoke();
+        }
+
+        private void LoadPhoto(object? sender, EventArgs e)
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "Imágenes|*.png;*.jpg;*.jpeg;*.bmp"
+            };
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                _photoPath = ofd.FileName;
+                picPhoto.Image = Image.FromFile(_photoPath);
+            }
         }
 
         private Label CreateLabel(string text, int x, int y)
@@ -221,79 +298,6 @@ namespace CoffeeManager.Front
             };
             parent.Controls.Add(txt);
             return txt;
-        }
-
-        private void LoadPhoto(object? sender, EventArgs e)
-        {
-            using var ofd = new OpenFileDialog
-            {
-                Filter = "Imágenes|*.png;*.jpg;*.jpeg;*.bmp"
-            };
-
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                _photoPath = ofd.FileName;
-                picPhoto.Image = Image.FromFile(_photoPath);
-            }
-        }
-
-        private void SaveEmployee(object? sender, EventArgs e)
-        {
-            var emp = new Employee
-            {
-                Id = _store.Employees.Count + 1,
-                FirstName = txtFirstName.Text,
-                LastName = txtLastName.Text,
-                CURP = txtCURP.Text,
-                RFC = txtRFC.Text,
-                Address = txtAddress.Text,
-                Phone = txtPhone.Text,
-                Email = txtEmail.Text,
-                DateOfBirth = dtBirth.Value,
-                Gender = cbGender.SelectedIndex switch
-                {
-                    0 => Gender.Male,
-                    1 => Gender.Female,
-                    _ => Gender.NonBinary
-                },
-                Type = cbType.SelectedIndex switch
-                {
-                    0 => EmployeeType.Waiter,
-                    1 => EmployeeType.Barista,
-                    2 => EmployeeType.Assistant,
-                    _ => EmployeeType.Administrator
-                },
-                Salary = decimal.TryParse(txtSalary.Text, out var s) ? s : 0,
-                SocialSecurityNumber = txtSSN.Text,
-                PathImage = _photoPath ?? "",
-                Active = chkActive.Checked
-            };
-
-            _store.AddEmployee(emp);
-
-            MessageBox.Show("Empleado guardado correctamente.", "Éxito",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            ClearForm();
-        }
-
-        private void ClearForm()
-        {
-            txtFirstName.Text = "";
-            txtLastName.Text = "";
-            txtCURP.Text = "";
-            txtRFC.Text = "";
-            txtAddress.Text = "";
-            txtPhone.Text = "";
-            txtEmail.Text = "";
-            txtSalary.Text = "";
-            txtSSN.Text = "";
-            cbGender.SelectedIndex = -1;
-            cbType.SelectedIndex = -1;
-            dtBirth.Value = DateTime.Today;
-            picPhoto.Image = null;
-            _photoPath = null;
-            chkActive.Checked = true;
         }
 
         private void PanelCard_Paint(object? sender, PaintEventArgs e)

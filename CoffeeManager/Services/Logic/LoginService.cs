@@ -11,7 +11,7 @@ namespace CoffeeManager.Services.Logic
     {
         private readonly string _filePath;
 
-        #region === Constructor (recibe 1 parámetro, como Program.cs necesita) ===
+        #region === Constructor  ===
         public LoginService(string filePath)
         {
             _filePath = filePath;

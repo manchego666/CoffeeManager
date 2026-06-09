@@ -4,10 +4,11 @@
 //  Description: In-memory store + financials + auto notifications.
 // ===============================================================
 
+using CoffeeManager.Services.Data;
+using CoffeeManager.Services.Logic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CoffeeManager.Services.Logic;
 
 namespace CoffeeManager.Models.Class
 {
@@ -29,7 +30,7 @@ namespace CoffeeManager.Models.Class
         /// <summary>
         /// List of employees working in the store. (≧◡≦)
         /// </summary>
-        public List<Employee> Employees { get; set; } = new();
+        public List<Employee> Employees { get; set; }
 
         /// <summary>
         /// List of sales performed in the store. (≧◡≦)
@@ -43,6 +44,11 @@ namespace CoffeeManager.Models.Class
 
         #endregion
 
+
+        public Store() 
+        {
+            Employees = EmployeeService.Load();
+        }
 
         #region FINANCIAL DATA (✧ω✧)
 
@@ -132,16 +138,20 @@ namespace CoffeeManager.Models.Class
         public void AddEmployee(Employee employee)
         {
             Employees.Add(employee);
+            EmployeeService.Save(Employees);
             _notifications.NotifyUserCreated(employee.GetFullName());
         }
+
 
         /// <summary>
         /// Call this after editing an employee to register an update notification. (✧ω✧)
         /// </summary>
         public void UpdateEmployee(Employee employee)
         {
+            EmployeeService.Save(Employees);
             _notifications.NotifyUserUpdated(employee.GetFullName());
         }
+
 
         /// <summary>
         /// Removes an employee by ID. (⁀ᗢ⁀)
@@ -152,8 +162,10 @@ namespace CoffeeManager.Models.Class
             if (e == null) return false;
 
             Employees.Remove(e);
+            EmployeeService.Save(Employees);
             return true;
         }
+
 
         /// <summary>
         /// Returns an employee by ID. (◕‿◕✿)
@@ -184,10 +196,7 @@ namespace CoffeeManager.Models.Class
         {
             Sales.Add(sale);
 
-            // 1. Revenue
-            TotalRevenue += sale.Total;
-
-            // 2. Cost of producing this sale
+            decimal saleRevenue = 0m;
             decimal saleCost = 0m;
 
             foreach (var detail in sale.Details)
@@ -195,22 +204,35 @@ namespace CoffeeManager.Models.Class
                 var product = detail.Product;
                 if (product == null) continue;
 
-                saleCost += product.GetUnitCost(Warehouse) * detail.Quantity;
+                // 1) Ingresos
+                var subtotal = product.Price * detail.Quantity;
+                saleRevenue += subtotal;
 
-                // Inventory consumption (if warehouse item exists with same name)
-                var item = Warehouse.GetItem(product.Name);
-                if (item != null)
+                // 2) Consumo de producto / almacén
+                //    y cálculo de costo real
+                var warnings = product.PrepareAndConsume(Warehouse, detail.Quantity);
+
+
+                // 3) Costo estimado por unidad * cantidad
+                var unitCost = product.GetUnitCost(Warehouse);
+                saleCost += unitCost * detail.Quantity;
+
+                // 4) Notificaciones de stock bajo / agotado (producto)
+                if (!product.UsesWarehouse)
                 {
-                    item.Consume(detail.Quantity);
-
-                    if (item.IsOutOfStock())
-                        _notifications.NotifyOutOfStock(item.Name);
-                    else if (item.IsLowStock())
-                        _notifications.NotifyLowStock(item.Name, item.Quantity);
+                    if (product.Stock <= 0)
+                        _notifications.NotifyOutOfStock(product.Name);
+                    else if (product.Stock <= 3) // umbral ejemplo
+                        _notifications.NotifyLowStock(product.Name, product.Stock);
                 }
             }
 
+            TotalRevenue += saleRevenue;
             TotalCost += saleCost;
+        }
+
+
+        TotalCost += saleCost;
         }
 
         /// <summary>
