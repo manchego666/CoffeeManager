@@ -78,7 +78,6 @@ Cómo Ejecutarlo
 ```
 git clone https://github.com/manchego666/CoffeeManager
 Abrir la solución en Visual Studio
-Restaurar paquetes (si aplica)
 Ejecutar con F5
 ```
 
