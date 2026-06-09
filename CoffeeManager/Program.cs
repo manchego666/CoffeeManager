@@ -1,17 +1,20 @@
+using CoffeeManager.Front;
+using CoffeeManager.Services.Logic;
+
 namespace CoffeeManager
 {
     internal static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new FormMain());
+
+            // Crear LoginService con la ruta del login.json
+            var loginService = new LoginService(Path.Combine(AppContext.BaseDirectory, "login.json"));
+
+            // Abrir primero el login
+            Application.Run(new FormLogin(loginService));
         }
     }
 }

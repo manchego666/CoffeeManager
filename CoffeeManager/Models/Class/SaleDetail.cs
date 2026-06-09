@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CoffeeManager.Models.Class
+﻿namespace CoffeeManager.Models.Class
 {
     /// <summary>
     /// Represents a single item inside a sale. (✿◠‿◠) ZORRODEV2026

@@ -5,48 +5,82 @@ using System.Linq;
 namespace CoffeeManager.Models.Class
 {
     /// <summary>
-    /// Represents a sale made in the coffee shop. (≧◡≦) ZORRODEV2026
+    /// Represents a sale transaction in the coffee shop. (≧◡≦) ZORRODEV2026
     /// </summary>
     internal class Sale
     {
-        #region DATA (✿◠‿◠)
+        #region DATA
 
-        /// <summary>
-        /// Unique identifier for the sale. (◕‿◕✿)
-        /// </summary>
         public int Id { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// ID of the employee who made the sale. (✧ω✧)
+        /// Employee who performed the sale. (≧◡≦)
         /// </summary>
-        public int EmployeeId { get; set; }
+        public Employee Employee { get; set; } = new();
+        public int EmployeeId => Employee.Id;
 
         /// <summary>
-        /// Date and time of the sale. (≧◡≦)
-        /// </summary>
-        public DateTime Date { get; set; }
-
-        /// <summary>
-        /// List of sale details (products + quantities). (ಠ‿ಠ)
+        /// List of sale details. (≧◡≦)
         /// </summary>
         public List<SaleDetail> Details { get; set; } = new();
 
-        /// <summary>
-        /// Total amount of the sale. (ง'̀-'́)ง ZORRODEV2026
-        /// </summary>
-        public decimal Total => CalculateTotal();
-
         #endregion
 
-        #region METHODS (ง'̀-'́)ง
+
+        #region METHODS
 
         /// <summary>
-        /// Calculates the total amount of the sale. (◕‿◕✿)
+        /// Adds a product to the sale. (≧◡≦)
         /// </summary>
-        public decimal CalculateTotal()
+        public void AddProduct(Product product, int quantity)
         {
-            return Details.Sum(d => d.CalculateSubtotal());
+            if (quantity <= 0) return;
+
+            var detail = Details.FirstOrDefault(d => d.Product.Id == product.Id);
+
+            if (detail == null)
+            {
+                Details.Add(new SaleDetail
+                {
+                    Product = product,
+                    Quantity = quantity
+                });
+            }
+            else
+            {
+                detail.Quantity += quantity;
+            }
         }
+
+        /// <summary>
+        /// Applies the sale to the store (warehouse + stock). (≧◡≦)
+        /// </summary>
+        public List<string> ApplyToStore(Store store)
+        {
+            var warnings = new List<string>();
+
+            foreach (var detail in Details)
+            {
+                var product = detail.Product;
+
+                if (product == null)
+                {
+                    warnings.Add("Product is null in SaleDetail. (╥﹏╥)");
+                    continue;
+                }
+
+                warnings.AddRange(product.CanPrepare(store.Warehouse, detail.Quantity));
+                warnings.AddRange(product.PrepareAndConsume(store.Warehouse, detail.Quantity));
+            }
+
+            return warnings;
+        }
+
+        /// <summary>
+        /// Total price of the sale. (≧◡≦)
+        /// </summary>
+        public decimal Total => Details.Sum(d => d.CalculateSubtotal());
 
         #endregion
     }

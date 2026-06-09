@@ -4,57 +4,95 @@ namespace CoffeeManager.Models.Class
 {
     /// <summary>
     /// Represents a product sold in the coffee shop.
-    /// Contains pricing, stock control and category management. (≧◡≦) ZORRODEV2026
+    /// Handles pricing, stock, categories and warehouse-based recipes. (≧◡≦) ZORRODEV2026
     /// </summary>
     internal class Product
     {
         #region DATA
 
         /// <summary>
-        /// Unique identifier for the product (≧◡≦) ZORRODEV2026
+        /// Unique identifier for the product. (≧◡≦)
         /// </summary>
         public int Id { get; set; }
 
         /// <summary>
-        /// Display name of the product. (≧◡≦) ZORRODEV2026
+        /// Display name of the product. (≧◡≦)
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Unit price of the product. (≧◡≦) ZORRODEV2026
+        /// Unit price of the product. (≧◡≦)
         /// </summary>
         public decimal Price { get; set; }
 
         /// <summary>
-        /// Current stock available. Must be non-negative. (≧◡≦) ZORRODEV2026
+        /// Current stock available. Used for bakery items and desserts. (≧◡≦)
         /// </summary>
         public int Stock { get; set; }
 
         /// <summary>
-        /// List of categories assigned to this product.
-        /// Categories are simple strings (no Category class required).(ಠ_ಠ)
+        /// True if this product uses warehouse ingredients (coffee drinks).
+        /// False if it only uses its own stock (bread, desserts). (≧◡≦)
         /// </summary>
-        public List<string> Categories { get; set; } = new();
+        public bool UsesWarehouse { get; set; }
+
+        /// <summary>
+        /// Recipe used to prepare one unit of this product when UsesWarehouse is true. (≧◡≦)
+        /// </summary>
+        public List<RecipeItem> Recipe { get; set; } = new();
 
         #endregion
 
-        #region METHODS
+
+        #region CATEGORY
 
         /// <summary>
-        /// Increases the stock by the specified amount. Amount must be positive. (≧◡≦) ZORRODEV2026
+        /// List of categories assigned to this product. (ಠ_ಠ)
         /// </summary>
-        /// <param name="amount">Amount to add to stock.</param> 
-        public void IncreaseStock(int amount)
+        public List<string> Categories { get; set; } = new();
+
+        /// <summary>
+        /// Adds a new category if it does not already exist. (≧◡≦)
+        /// </summary>
+        public void AddCategory(string category)
         {
-            if (amount <= 0) return;
-            Stock += amount;
+            if (!string.IsNullOrWhiteSpace(category) && !Categories.Contains(category))
+                Categories.Add(category);
         }
 
         /// <summary>
-        /// Decreases the stock if enough units are available.
-        /// Returns true if the operation was successful. (≧◡≦) ZORRODEV2026
+        /// Removes a category from the product. (≧◡≦)
         /// </summary>
-        /// <param name="amount">Amount to subtract from stock.</param>
+        public void RemoveCategory(string category)
+        {
+            Categories.Remove(category);
+        }
+
+        /// <summary>
+        /// Checks if the product belongs to the specified category. (≧◡≦)
+        /// </summary>
+        public bool HasCategory(string category)
+        {
+            return Categories.Contains(category);
+        }
+
+        #endregion
+
+
+        #region STOCK
+
+        /// <summary>
+        /// Increases stock by a positive amount. (≧◡≦)
+        /// </summary>
+        public void IncreaseStock(int amount)
+        {
+            if (amount > 0)
+                Stock += amount;
+        }
+
+        /// <summary>
+        /// Decreases stock if enough units are available. (≧◡≦)
+        /// </summary>
         public bool DecreaseStock(int amount)
         {
             if (amount <= 0 || amount > Stock)
@@ -65,42 +103,154 @@ namespace CoffeeManager.Models.Class
         }
 
         /// <summary>
-        /// Returns true if the product has at least one unit in stock. (≧◡≦) ZORRODEV2026
+        /// Returns true if at least one unit is available. (≧◡≦)
         /// </summary>
         public bool IsAvailable()
         {
             return Stock > 0;
         }
 
+        #endregion
+
+
+        #region COST
+
         /// <summary>
-        /// Adds a new category to the product if it does not already exist and is not null or whitespace. (≧◡≦) ZORRODEV2026
+        /// Calculates the estimated cost of one unit of this product
+        /// based on its recipe and warehouse item costs. (≧◡≦)
         /// </summary>
-        /// <param name="category">Category name to add.</param>
-        public void AddCategory(string category)
+        public decimal GetUnitCost(Warehouse warehouse)
         {
-            if (!string.IsNullOrWhiteSpace(category) && !Categories.Contains(category))
-                Categories.Add(category);
+            if (!UsesWarehouse || Recipe.Count == 0)
+                return 0m;
+
+            decimal total = 0m;
+
+            foreach (var ingredient in Recipe)
+            {
+                var item = warehouse.GetItemById(ingredient.IngredientId);
+                if (item == null) continue;
+
+                total += ingredient.Quantity * item.CostPerUnit;
+            }
+
+            return total;
         }
 
         /// <summary>
-        /// Removes a category from the product. (≧◡≦) ZORRODEV2026
+        /// Calculates the estimated profit per unit (Price - Cost). (≧◡≦)
         /// </summary>
-        /// <param name="category">Category name to remove.</param>
-        /// </summary>
-        /// <param name="category">Category name to remove.</param>
-        public void RemoveCategory(string category)
+        public decimal GetEstimatedProfit(Warehouse warehouse)
         {
-            Categories.Remove(category);
+            return Price - GetUnitCost(warehouse);
+        }
+
+        #endregion
+
+
+        #region VALIDATION
+
+        /// <summary>
+        /// Checks if the product can be prepared based on warehouse availability.
+        /// Returns warnings but does NOT consume anything. (≧◡≦)
+        /// </summary>
+        public List<string> CanPrepare(Warehouse warehouse, int quantity)
+        {
+            var warnings = new List<string>();
+
+            if (!UsesWarehouse)
+                return warnings;
+
+            foreach (var ingredient in Recipe)
+            {
+                var item = warehouse.GetItemById(ingredient.IngredientId);
+
+                if (item == null)
+                {
+                    if (ingredient.IsOptional)
+                        warnings.Add($"Optional ingredient '{ingredient.IngredientName}' is not registered. (≧◡≦)");
+                    else
+                        warnings.Add($"Missing required ingredient '{ingredient.IngredientName}'. (╥﹏╥)");
+                    continue;
+                }
+
+                var totalNeeded = ingredient.Quantity * quantity;
+
+                if (item.Quantity < totalNeeded)
+                {
+                    if (ingredient.IsOptional)
+                        warnings.Add($"Optional ingredient '{ingredient.IngredientName}' is low. Continuing. (≧◡≦)");
+                    else
+                        warnings.Add($"Not enough '{ingredient.IngredientName}' to prepare {quantity}. (╥﹏╥)");
+                }
+            }
+
+            return warnings;
+        }
+
+        #endregion
+
+
+        #region PREPARATION
+
+        /// <summary>
+        /// Simulates preparation without consuming warehouse items. (≧◡≦)
+        /// </summary>
+        public Dictionary<string, decimal> SimulatePreparation(int quantity)
+        {
+            var usage = new Dictionary<string, decimal>();
+
+            if (!UsesWarehouse)
+                return usage;
+
+            foreach (var ingredient in Recipe)
+                usage[ingredient.IngredientName] = ingredient.Quantity * quantity;
+
+            return usage;
         }
 
         /// <summary>
-        /// Checks if the product belongs to the specified category. (≧◡≦) ZORRODEV2026
+        /// Prepares the product and consumes ingredients from the warehouse.
+        /// Returns warnings for missing or low ingredients. (≧◡≦)
         /// </summary>
-        /// <param name="category">Category name to check.</param>
-        public bool HasCategory(string category)
+        public List<string> PrepareAndConsume(Warehouse warehouse, int quantity)
         {
-            return Categories.Contains(category);
-        } 
+            var warnings = new List<string>();
+
+            if (!UsesWarehouse)
+            {
+                if (!DecreaseStock(quantity))
+                    warnings.Add($"Not enough stock of '{Name}' to sell {quantity}. (╥﹏╥)");
+                return warnings;
+            }
+
+            foreach (var ingredient in Recipe)
+            {
+                var item = warehouse.GetItemById(ingredient.IngredientId);
+                var totalNeeded = ingredient.Quantity * quantity;
+
+                if (item == null)
+                {
+                    if (ingredient.IsOptional)
+                        warnings.Add($"Optional '{ingredient.IngredientName}' missing. Continuing. (≧◡≦)");
+                    else
+                        warnings.Add($"Missing required '{ingredient.IngredientName}'. (╥﹏╥)");
+                    continue;
+                }
+
+                if (item.Quantity < totalNeeded)
+                {
+                    if (ingredient.IsOptional)
+                        warnings.Add($"Optional '{ingredient.IngredientName}' low. Continuing. (≧◡≦)");
+                    else
+                        warnings.Add($"'{ingredient.IngredientName}' will go negative. (╥﹏╥)");
+                }
+
+                warehouse.ConsumeById(ingredient.IngredientId, totalNeeded);
+            }
+
+            return warnings;
+        }
 
         #endregion
     }
