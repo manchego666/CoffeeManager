@@ -1,4 +1,12 @@
-﻿namespace CoffeeManager.Models.Class
+﻿// ===============================================================
+//  ZORRODEV 2026 — Inventory Engine
+//  Authors: Christopher (≧◡≦), Daniel (ง'̀-'́)ง, Brayan (✧ω✧), Jesús (◕‿◕✿)
+//  Description: Stock logic, conversions and alerts. (≧◡≦)
+// ===============================================================
+
+using System;
+
+namespace CoffeeManager.Models.Class
 {
     /// <summary>
     /// Represents a warehouse item with professional packaging logic. (≧◡≦) ZORRODEV2026
@@ -41,7 +49,6 @@
 
         #endregion
 
-
         #region METHODS
 
         /// <summary>
@@ -67,13 +74,27 @@
         }
 
         /// <summary>
-        /// Consumes base units (pieces/ml/g). (≧◡≦)
+        /// Consumes base units (pieces/ml/g). Prevents negative stock. (≧◡≦)
         /// </summary>
         public void Consume(decimal baseUnits)
         {
             Quantity -= baseUnits;
+            if (Quantity < 0)
+                Quantity = 0;
+
             LastUpdated = DateTime.Now;
         }
+
+        /// <summary>
+        /// Returns true if the item is out of stock. (╥﹏╥)
+        /// </summary>
+        public bool IsOutOfStock() => Quantity <= 0;
+
+        /// <summary>
+        /// Returns true if the item is low on stock. (✧ω✧)
+        /// </summary>
+        public bool IsLowStock(decimal min = 5) =>
+            Quantity > 0 && Quantity <= min;
 
         #endregion
     }

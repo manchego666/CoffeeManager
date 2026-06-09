@@ -1,6 +1,13 @@
-﻿using System;
+﻿// ===============================================================
+//  ZORRODEV 2026 — Store Engine
+//  Authors: Christopher (≧◡≦), Daniel (ง'̀-'́)ง, Brayan (✧ω✧), Jesús (◕‿◕✿)
+//  Description: In-memory store + financials + auto notifications.
+// ===============================================================
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using CoffeeManager.Services.Logic;
 
 namespace CoffeeManager.Models.Class
 {
@@ -10,6 +17,8 @@ namespace CoffeeManager.Models.Class
     /// </summary>
     internal class Store
     {
+        private readonly NotificationService _notifications = new();
+
         #region DATA (≧◡≦)
 
         /// <summary>
@@ -73,6 +82,15 @@ namespace CoffeeManager.Models.Class
         public void AddProduct(Product product)
         {
             Products.Add(product);
+            _notifications.NotifyProductCreated(product.Name);
+        }
+
+        /// <summary>
+        /// Call this after editing a product to register an update notification. (✧ω✧)
+        /// </summary>
+        public void UpdateProduct(Product product)
+        {
+            _notifications.NotifyProductUpdated(product.Name);
         }
 
         /// <summary>
@@ -114,6 +132,15 @@ namespace CoffeeManager.Models.Class
         public void AddEmployee(Employee employee)
         {
             Employees.Add(employee);
+            _notifications.NotifyUserCreated(employee.GetFullName());
+        }
+
+        /// <summary>
+        /// Call this after editing an employee to register an update notification. (✧ω✧)
+        /// </summary>
+        public void UpdateEmployee(Employee employee)
+        {
+            _notifications.NotifyUserUpdated(employee.GetFullName());
         }
 
         /// <summary>
@@ -151,6 +178,7 @@ namespace CoffeeManager.Models.Class
 
         /// <summary>
         /// Adds a new sale to the store and updates financial data. (≧◡≦)
+        /// Also updates inventory and triggers stock notifications. (✧ω✧)
         /// </summary>
         public void AddSale(Sale sale)
         {
@@ -168,6 +196,18 @@ namespace CoffeeManager.Models.Class
                 if (product == null) continue;
 
                 saleCost += product.GetUnitCost(Warehouse) * detail.Quantity;
+
+                // Inventory consumption (if warehouse item exists with same name)
+                var item = Warehouse.GetItem(product.Name);
+                if (item != null)
+                {
+                    item.Consume(detail.Quantity);
+
+                    if (item.IsOutOfStock())
+                        _notifications.NotifyOutOfStock(item.Name);
+                    else if (item.IsLowStock())
+                        _notifications.NotifyLowStock(item.Name, item.Quantity);
+                }
             }
 
             TotalCost += saleCost;
@@ -196,14 +236,20 @@ namespace CoffeeManager.Models.Class
 
         /// <summary>
         /// Registers waste (merma) and updates warehouse + financials. (╥﹏╥)
+        /// Also triggers stock notifications if needed. (✧ω✧)
         /// </summary>
         public void RegisterWaste(string ingredientName, decimal quantity)
         {
             var item = Warehouse.GetItem(ingredientName);
             if (item == null) return;
 
-            item.Quantity -= quantity;
+            item.Consume(quantity);
             TotalWaste += quantity * item.CostPerUnit;
+
+            if (item.IsOutOfStock())
+                _notifications.NotifyOutOfStock(item.Name);
+            else if (item.IsLowStock())
+                _notifications.NotifyLowStock(item.Name, item.Quantity);
         }
 
         /// <summary>
