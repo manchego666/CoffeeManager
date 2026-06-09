@@ -1,6 +1,15 @@
+// ===============================================================
+//  ZORRODEV 2026 — Main Form Engine
+//  Authors: Christopher (≧◡≦), Daniel (ง'̀-'́)ง, Brayan (✧ω✧), Jesús (◕‿◕✿)
+//  Description: Main application window with animated hamburger menu,
+//               dynamic module loading, real KPIs and live notifications.
+// ===============================================================
+
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Windows.Forms;
 using CoffeeManager.Models.Class;
 using CoffeeManager.Services;
@@ -20,37 +29,57 @@ namespace CoffeeManager.Front
     {
         #region === DATA & SERVICES [ZORRODEV 2026] ===
 
+        /// <summary>
+        /// Central in-memory store for products, employees, sales and warehouse. (≧◡≦)
+        /// </summary>
         private readonly Store _store = new();
+
+        /// <summary>
+        /// JSON helper for loading and saving data. (≧◡≦)
+        /// </summary>
         private readonly JsonService _jsonService = new();
+
+        /// <summary>
+        /// Service used to generate daily TXT reports. (≧◡≦)
+        /// </summary>
         private readonly DailyReportService _dailyReportService = new();
+
+        /// <summary>
+        /// Handles login persistence and validation. (≧◡≦)
+        /// </summary>
         private readonly LoginService _loginService;
+
+        /// <summary>
+        /// Centralized notification engine for dashboard alerts. (✧ω✧)
+        /// </summary>
+        private readonly NotificationService _notificationService = new();
 
         #endregion
 
         #region === UI FIELDS [ZORRODEV 2026] ===
 
-        private Panel panelMenu;
-        private Panel panelContent;
-        private FlowLayoutPanel rootPanel;
+        private Panel panelMenu = null!;
+        private Panel panelContent = null!;
+        private FlowLayoutPanel rootPanel = null!;
 
-        private Panel panelSubEmployees;
-        private Panel panelSubWarehouse;
-        private Panel panelSubProducts;
-        private Panel panelSubSales;
-        private Panel panelSubReports;
-        private Panel panelSubSettings;
+        private Panel panelSubEmployees = null!;
+        private Panel panelSubWarehouse = null!;
+        private Panel panelSubProducts = null!;
+        private Panel panelSubSales = null!;
+        private Panel panelSubReports = null!;
+        private Panel panelSubSettings = null!;
 
-        private Button btnToggleMenu;
-        private Button btnHome;
-        private Button btnEmployees;
-        private Button btnWarehouse;
-        private Button btnProducts;
-        private Button btnSales;
-        private Button btnReports;
-        private Button btnSettings;
-        private Button btnExit;
+        private Button btnToggleMenu = null!;
+        private Button btnHome = null!;
+        private Button btnEmployees = null!;
+        private Button btnWarehouse = null!;
+        private Button btnProducts = null!;
+        private Button btnSales = null!;
+        private Button btnReports = null!;
+        private Button btnSettings = null!;
+        private Button btnExit = null!;
 
-        private Timer slideTimer;
+        private Timer slideTimer = null!;
         private bool isMenuExpanded = true;
         private bool isAnimating = false;
 
@@ -62,6 +91,9 @@ namespace CoffeeManager.Front
 
         #region === PERFORMANCE BOOSTERS [ZORRODEV 2026] ===
 
+        /// <summary>
+        /// Enables WS_EX_COMPOSITED to reduce flickering on complex layouts. (✧ω✧)
+        /// </summary>
         protected override CreateParams CreateParams
         {
             get
@@ -76,12 +108,15 @@ namespace CoffeeManager.Front
 
         #region === CONSTRUCTOR [ZORRODEV 2026] ===
 
+        /// <summary>
+        /// Initializes the main form, services, layout and dashboard. (≧◡≦)
+        /// </summary>
         public FormMain()
         {
             Text = "CoffeeManager PRO";
             StartPosition = FormStartPosition.CenterScreen;
 
-            // Incrementamos el tamaño por defecto del Form para dar un aspecto de pantalla profesional amplia
+            // Professional wide default size
             MinimumSize = new Size(1280, 800);
             Size = new Size(1366, 840);
 
@@ -95,12 +130,44 @@ namespace CoffeeManager.Front
 
             InitializeSlideTimer();
             InitializeLayout();
+
+            // Load real data into Store and show real dashboard
+            LoadStoreData();
+            LoadDashboardModule();
+        }
+
+        #endregion
+
+        #region === DATA LOADING (STORE + NOTIFICATIONS) ===
+
+        /// <summary>
+        /// Loads products, employees, sales and warehouse from JSON into the Store. (≧◡≦)
+        /// </summary>
+        private void LoadStoreData()
+        {
+            try
+            {
+                _store.Products = _jsonService.Load<Product>(PathService.Products);
+                _store.Employees = _jsonService.Load<Employee>(PathService.Employees);
+                _store.Sales = _jsonService.Load<Sale>(PathService.Sales);
+
+                var warehouse = _jsonService.LoadObject<Warehouse>("Data/warehouse.json");
+                if (warehouse != null)
+                    _store.Warehouse = warehouse;
+            }
+            catch
+            {
+                // For the final project we keep it silent; could log in a real system.
+            }
         }
 
         #endregion
 
         #region === INITIALIZE LAYOUT (MENU + CONTENT) ===
 
+        /// <summary>
+        /// Builds the left hamburger menu and the main content panel. (≧◡≦)
+        /// </summary>
         private void InitializeLayout()
         {
             BackgroundImage = Properties.Resources.bg_main;
@@ -147,7 +214,14 @@ namespace CoffeeManager.Front
 
             // === Main Navigation Buttons ===
             btnHome = CreateMainButton("Inicio", Properties.Resources.logo_icon, ref y);
-            btnHome.Click += (s, e) => { if (!isAnimating) { HideAllSubmenus(); LoadDashboardModule(); } };
+            btnHome.Click += (s, e) =>
+            {
+                if (!isAnimating)
+                {
+                    HideAllSubmenus();
+                    LoadDashboardModule();
+                }
+            };
 
             btnEmployees = CreateMainButton("Empleados", Properties.Resources.logo_icon, ref y);
             btnEmployees.Click += (s, e) => { if (isMenuExpanded && !isAnimating) ShowSubmenu(panelSubEmployees); };
@@ -217,16 +291,18 @@ namespace CoffeeManager.Front
                                 LineAlignment = StringAlignment.Center,
                                 Alignment = StringAlignment.Near
                             };
-                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush, new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
+                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush,
+                                new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
                         }
                     }
                 }
             };
             panelMenu.Controls.Add(btnExit);
-
-            LoadDashboardModule();
         }
 
+        /// <summary>
+        /// Creates a main navigation button with icon + text and custom painting. (≧◡≦)
+        /// </summary>
         private Button CreateMainButton(string text, Image icon, ref int y)
         {
             var btn = new Button
@@ -238,7 +314,7 @@ namespace CoffeeManager.Front
                 Height = 40,
                 Location = new Point(10, y),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.Transparent, // Botones limpios que adoptan el color rosa traslúcido de fondo
+                BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(50, 50, 50),
                 Font = new Font("Segoe UI", 11, FontStyle.Regular),
                 Cursor = Cursors.Hand
@@ -274,7 +350,8 @@ namespace CoffeeManager.Front
                                 LineAlignment = StringAlignment.Center,
                                 Alignment = StringAlignment.Near
                             };
-                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush, new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
+                            pe.Graphics.DrawString(b.AccessibleName, b.Font, brush,
+                                new Rectangle(textX, 0, b.Width - textX, b.Height), sf);
                         }
                     }
                 }
@@ -291,11 +368,14 @@ namespace CoffeeManager.Front
 
         #region === DYNAMIC DASHBOARD (INICIO PERFECTO) ===
 
+        /// <summary>
+        /// Builds the main dashboard (Inicio) with real KPIs and notifications. (≧◡≦)
+        /// </summary>
         private void LoadDashboardModule()
         {
             panelContent.Controls.Clear();
 
-            // FlowLayoutPanel principal configurado con anclajes estables a la derecha
+            // FlowLayoutPanel principal
             rootPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -303,7 +383,10 @@ namespace CoffeeManager.Front
                 Padding = new Padding(10, 5, 10, 10),
                 BackColor = Color.Transparent
             };
-            rootPanel.GetType().GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.SetValue(rootPanel, true, null);
+            rootPanel.GetType()
+                .GetProperty("DoubleBuffered",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(rootPanel, true, null);
 
             // --- Header Section ---
             var panelHeader = new FlowLayoutPanel
@@ -332,8 +415,28 @@ namespace CoffeeManager.Front
                 Anchor = AnchorStyles.Left
             };
 
+            // Refresh button (top-right of header)
+            var btnRefresh = new Button
+            {
+                Text = "Actualizar",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Size = new Size(110, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(240, 128, 148),
+                ForeColor = Color.White,
+                Margin = new Padding(40, 18, 0, 0),
+                Cursor = Cursors.Hand
+            };
+            btnRefresh.FlatAppearance.BorderSize = 0;
+            btnRefresh.Click += (s, e) =>
+            {
+                LoadStoreData();
+                LoadDashboardModule();
+            };
+
             panelHeader.Controls.Add(picHeaderLogo);
             panelHeader.Controls.Add(lblTitle);
+            panelHeader.Controls.Add(btnRefresh);
             rootPanel.SetFlowBreak(panelHeader, true);
             rootPanel.Controls.Add(panelHeader);
 
@@ -349,7 +452,16 @@ namespace CoffeeManager.Front
             rootPanel.SetFlowBreak(lblResumenTitle, true);
             rootPanel.Controls.Add(lblResumenTitle);
 
-            // --- KPI CARDS (Tamaños exactos fijos idénticos a tu mockup) ---
+            // === REAL KPIs FROM STORE ===
+            decimal ventasHoy = _store.Sales
+                .Where(s => s.Date.Date == DateTime.Today)
+                .Sum(s => s.Total);
+
+            int productosActivos = _store.Products.Count;
+            int recetas = _store.Products.Count(p => p.UsesWarehouse);
+            int empleadosActivos = _store.Employees.Count(e => e.Active);
+
+            // --- KPI CARDS ---
             var panelMetricsGroup = new FlowLayoutPanel
             {
                 Width = 1020,
@@ -359,10 +471,10 @@ namespace CoffeeManager.Front
             };
             rootPanel.SetFlowBreak(panelMetricsGroup, true);
 
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Ventas Hoy", "$ 12,450.00", Color.FromArgb(240, 128, 148)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Productos", "148 Activos", Color.FromArgb(70, 180, 160)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Recetas", "32 Registros", Color.FromArgb(100, 150, 220)));
-            panelMetricsGroup.Controls.Add(CreateKpiCard("Empleados", "8 Personal", Color.FromArgb(220, 160, 90)));
+            panelMetricsGroup.Controls.Add(CreateKpiCard("Ventas Hoy", $"$ {ventasHoy:F2}", Color.FromArgb(240, 128, 148)));
+            panelMetricsGroup.Controls.Add(CreateKpiCard("Productos", $"{productosActivos} Activos", Color.FromArgb(70, 180, 160)));
+            panelMetricsGroup.Controls.Add(CreateKpiCard("Recetas", $"{recetas} Registros", Color.FromArgb(100, 150, 220)));
+            panelMetricsGroup.Controls.Add(CreateKpiCard("Empleados", $"{empleadosActivos} Personal", Color.FromArgb(220, 160, 90)));
             rootPanel.Controls.Add(panelMetricsGroup);
 
             // --- ACCIONES RÁPIDAS ---
@@ -372,7 +484,7 @@ namespace CoffeeManager.Front
                 Height = 320,
                 BackColor = Color.Transparent,
                 FlowDirection = FlowDirection.TopDown,
-                Margin = new Padding(0, 0, 40, 0) // Espacio a la derecha antes de las notificaciones
+                Margin = new Padding(0, 0, 40, 0)
             };
 
             var lblActionsTitle = new Label
@@ -388,7 +500,7 @@ namespace CoffeeManager.Front
             panelActions.Controls.Add(CreateQuickActionButton("Corte de Caja"));
             rootPanel.Controls.Add(panelActions);
 
-            // --- NOTIFICACIONES RECIENTES ---
+            // --- NOTIFICACIONES RECIENTES (REALES) ---
             var panelNotifications = new Panel
             {
                 Width = 480,
@@ -409,14 +521,36 @@ namespace CoffeeManager.Front
             panelNotifications.Controls.Add(lblNotifTitle);
 
             int notifY = 55;
-            AddNotificationItem(panelNotifications, "Alerta de Stock", "Insumo 'Leche Entera' por debajo del mínimo.", ref notifY);
-            AddNotificationItem(panelNotifications, "Asistencia", "Empleado Carlos Mendoza inició turno.", ref notifY);
-            AddNotificationItem(panelNotifications, "Sistema", "Copia de seguridad realizada con éxito.", ref notifY);
+
+            List<Notification> notifications = _notificationService.LoadNotifications()
+                .OrderByDescending(n => n.Date)
+                .Take(6)
+                .ToList();
+
+            if (notifications.Count == 0)
+            {
+                AddNotificationItem(panelNotifications,
+                    "Sistema",
+                    "No hay notificaciones registradas todavía. (≧◡≦)",
+                    ref notifY);
+            }
+            else
+            {
+                foreach (var n in notifications)
+                {
+                    string title = $"{n.Title} — {n.Date:HH:mm}";
+                    AddNotificationItem(panelNotifications, title, n.Detail, ref notifY);
+                }
+            }
+
             rootPanel.Controls.Add(panelNotifications);
 
             panelContent.Controls.Add(rootPanel);
         }
 
+        /// <summary>
+        /// Creates a KPI card with title, value and accent color. (≧◡≦)
+        /// </summary>
         private Panel CreateKpiCard(string title, string value, Color accentColor)
         {
             var card = new Panel
@@ -454,6 +588,9 @@ namespace CoffeeManager.Front
             return card;
         }
 
+        /// <summary>
+        /// Creates a quick action button with hover effects. (≧◡≦)
+        /// </summary>
         private Button CreateQuickActionButton(string text)
         {
             var btn = new Button
@@ -468,13 +605,18 @@ namespace CoffeeManager.Front
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
-            btn.Click += (s, e) => MessageBox.Show($"{text} se encuentra actualmente en desarrollo.", "Módulo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btn.Click += (s, e) =>
+                MessageBox.Show($"{text} se encuentra actualmente en desarrollo.",
+                    "Módulo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(240, 128, 148);
             btn.MouseLeave += (s, e) => btn.BackColor = Color.White;
             return btn;
         }
 
+        /// <summary>
+        /// Adds a notification row with icon + text to the notifications panel. (≧◡≦)
+        /// </summary>
         private void AddNotificationItem(Panel parent, string title, string detail, ref int y)
         {
             var picIcon = new PictureBox
@@ -504,6 +646,9 @@ namespace CoffeeManager.Front
 
         #region === SUBMENUS ===
 
+        /// <summary>
+        /// Creates all submenu panels and their buttons. (≧◡≦)
+        /// </summary>
         private void CreateSubmenus()
         {
             panelSubEmployees = CreateSubmenuPanelBelow(btnEmployees);
@@ -537,6 +682,9 @@ namespace CoffeeManager.Front
             HideAllSubmenus();
         }
 
+        /// <summary>
+        /// Creates a submenu panel positioned below a parent button. (≧◡≦)
+        /// </summary>
         private Panel CreateSubmenuPanelBelow(Button parent)
         {
             var panel = new Panel
@@ -551,6 +699,9 @@ namespace CoffeeManager.Front
             return panel;
         }
 
+        /// <summary>
+        /// Adds a submenu button to a submenu panel. (≧◡≦)
+        /// </summary>
         private void AddSubButton(Panel parent, string text, EventHandler onClick)
         {
             int y = parent.Controls.Count * 35;
@@ -573,6 +724,9 @@ namespace CoffeeManager.Front
             parent.Controls.Add(btn);
         }
 
+        /// <summary>
+        /// Shows a specific submenu and hides the others. (≧◡≦)
+        /// </summary>
         private void ShowSubmenu(Panel submenu)
         {
             if (!submenu.Visible)
@@ -584,6 +738,9 @@ namespace CoffeeManager.Front
             else submenu.Visible = false;
         }
 
+        /// <summary>
+        /// Hides all submenu panels. (≧◡≦)
+        /// </summary>
         private void HideAllSubmenus()
         {
             if (panelSubEmployees != null) panelSubEmployees.Visible = false;
@@ -598,12 +755,18 @@ namespace CoffeeManager.Front
 
         #region === SLIDE MENU ANIMATION ===
 
+        /// <summary>
+        /// Initializes the slide animation timer. (≧◡≦)
+        /// </summary>
         private void InitializeSlideTimer()
         {
             slideTimer = new Timer { Interval = 10 };
             slideTimer.Tick += SlideTick;
         }
 
+        /// <summary>
+        /// Starts the menu expand/collapse animation. (≧◡≦)
+        /// </summary>
         private void ToggleMenu()
         {
             if (isAnimating) return;
@@ -615,7 +778,10 @@ namespace CoffeeManager.Front
             slideTimer.Start();
         }
 
-        private void SlideTick(object sender, EventArgs e)
+        /// <summary>
+        /// Handles each animation step for the sliding menu. (≧◡≦)
+        /// </summary>
+        private void SlideTick(object? sender, EventArgs e)
         {
             if (isMenuExpanded)
             {
@@ -647,6 +813,9 @@ namespace CoffeeManager.Front
             }
         }
 
+        /// <summary>
+        /// Adjusts button sizes and positions for collapsed menu. (≧◡≦)
+        /// </summary>
         private void CollapseMenu()
         {
             btnToggleMenu.Width = MenuCollapsedWidth - 16;
@@ -663,6 +832,9 @@ namespace CoffeeManager.Front
             }
         }
 
+        /// <summary>
+        /// Adjusts button sizes and positions for expanded menu. (≧◡≦)
+        /// </summary>
         private void ExpandMenu()
         {
             btnToggleMenu.Width = MenuExpandedWidth - 20;
@@ -683,6 +855,9 @@ namespace CoffeeManager.Front
 
         #region === MODULE LOADING ===
 
+        /// <summary>
+        /// Loads a module control into the main content panel. (≧◡≦)
+        /// </summary>
         private void LoadModule(Control module)
         {
             panelContent.Controls.Clear();
@@ -690,6 +865,9 @@ namespace CoffeeManager.Front
             panelContent.Controls.Add(module);
         }
 
+        /// <summary>
+        /// Loads a simple placeholder panel for modules not implemented yet. (≧◡≦)
+        /// </summary>
         private void LoadPlaceholder(string name)
         {
             var p = new Panel
@@ -715,6 +893,9 @@ namespace CoffeeManager.Front
 
         #region === REPORTS ===
 
+        /// <summary>
+        /// Generates and saves a daily TXT report using DailyReportService. (≧◡≦)
+        /// </summary>
         private void GenerateDailyReport()
         {
             using var dlg = new SaveFileDialog
@@ -735,12 +916,18 @@ namespace CoffeeManager.Front
 
         #region === HOVER EFFECTS ===
 
+        /// <summary>
+        /// Applies hover effect for main menu buttons. (≧◡≦)
+        /// </summary>
         private void ApplyHover(Button btn)
         {
             btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(220, 255, 210, 220);
             btn.MouseLeave += (s, e) => btn.BackColor = Color.Transparent;
         }
 
+        /// <summary>
+        /// Applies hover effect for submenu buttons. (≧◡≦)
+        /// </summary>
         private void ApplyHoverSub(Button btn)
         {
             btn.MouseEnter += (s, e) => btn.BackColor = Color.FromArgb(230, 230, 230);
