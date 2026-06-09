@@ -10,10 +10,14 @@ namespace CoffeeManager
         {
             ApplicationConfiguration.Initialize();
 
-            // Crear LoginService con la ruta del login.json
-            var loginService = new LoginService(Path.Combine(AppContext.BaseDirectory, "login.json"));
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string folder = Path.Combine(appData, "CoffeeManager");
+            Directory.CreateDirectory(folder);
 
-            // Abrir primero el login
+            string loginPath = Path.Combine(folder, "login.json");
+
+            var loginService = new LoginService(loginPath);
+
             Application.Run(new FormLogin(loginService));
         }
     }

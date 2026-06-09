@@ -12,3 +12,4 @@ namespace CoffeeManager.Services
         public static string DailyReport => Path.Combine(BasePath, "daily_report.txt");
     }
 }
+
