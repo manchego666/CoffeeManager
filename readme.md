@@ -33,7 +33,7 @@ Edición de datos de usuario
 
 Interfaz (UI Preview)
 Las imágenes se encuentran en la carpeta Brand/.
-Puedes agregar capturas reales más adelante.
+Puedes se pueden modificar es adaptable a estilos lindos.
 
 bg_main.png
 bg_login.png
