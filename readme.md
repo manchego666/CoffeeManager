@@ -5,7 +5,7 @@
 ☕ CoffeeManager
 Sistema de gestión para cafeterías — Inventarios, ventas y administración
 
-CoffeeManager es una aplicación de escritorio desarrollada en C# (.NET) diseñada para administrar de forma eficiente una cafetería pequeña o mediana. Incluye módulos de inventario, ventas, reportes y administración de usuarios, todo con una interfaz visual estilo kawaii pastel.
+CoffeeManager es una aplicación de escritorio desarrollada en C# (.NET) diseñada para administrar de forma eficiente una cafetería pequeña o mediana. Incluye módulos de inventario, ventas, reportes y administración de usuarios, todo con una interfaz visual estilo lindo y adaptable facil de usar.
 
 ✨ Características Principales
 
