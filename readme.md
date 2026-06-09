@@ -24,7 +24,7 @@ Integración con reportes
 Reportes
 Reportes diarios, semanales y mensuales
 Paneles visuales con fondos personalizados
-Exportación futura a PDF/Excel
+Exportación y guardado de datos
 
 Administración de Usuarios
 Roles: Administrador / Empleado
