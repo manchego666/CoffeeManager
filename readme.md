@@ -10,28 +10,42 @@ CoffeeManager es una aplicación de escritorio desarrollada en C# (.NET) diseña
 ✨ Características Principales
 
 Inventario
+```
 Control de productos y existencias
 Registro de entradas y salidas
 Alertas de stock bajo
 Íconos personalizados para cada categoría
-
+```
 Ventas
+```
 Registro rápido de ventas
 Cálculo automático de totales
 Historial de transacciones
 Integración con reportes
+```
 
 Reportes
+```
+
 Reportes diarios, semanales y mensuales
 Paneles visuales con fondos personalizados
 Exportación y guardado de datos
+```
 
 Administración de Usuarios
+
+```
+
 Roles: Administrador / Empleado
 Control de acceso por permisos
 Edición de datos de usuario
+```
+
 
 Interfaz (UI Preview)
+
+```
+
 Las imágenes se encuentran en la carpeta Brand/.
 Puedes se pueden modificar es adaptable a estilos lindos.
 
@@ -39,6 +53,7 @@ bg_main.png
 bg_login.png
 bg_report.png
 bg_warehouse.png
+```
 
 Estructura del Proyecto
 ```
@@ -53,7 +68,7 @@ CoffeeManager/
 ```
 Tecnologías Utilizadas
 ```
-C# (.NET 8 / WinForms o WPF)
+C# (.NET 10 / WinForms o WPF)
 Visual Studio 2022
 Arquitectura modular
 Recursos gráficos personalizados
