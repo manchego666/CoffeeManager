@@ -16,7 +16,7 @@ namespace CoffeeManager.Models.Class
     /// Represents the in-memory store of the system.
     /// Holds products, employees, sales, warehouse and financial data. (ง'̀-'́)ง ZORRODEV2026
     /// </summary>
-    internal class Store
+    public class Store
     {
         private readonly NotificationService _notifications = new();
 
@@ -25,7 +25,8 @@ namespace CoffeeManager.Models.Class
         /// <summary>
         /// List of products available in the store. (≧◡≦)
         /// </summary>
-        public List<Product> Products { get; set; } = new();
+        public List<Product> Products { get; set; }
+
 
         /// <summary>
         /// List of employees working in the store. (≧◡≦)
@@ -45,10 +46,15 @@ namespace CoffeeManager.Models.Class
         #endregion
 
 
-        public Store() 
+        public Store()
         {
-            Employees = EmployeeService.Load();
+            Employees = EmployeeService.Load() ?? new List<Employee>();
+            Warehouse = WarehouseService.Load() ?? new Warehouse();
+            Products = ProductService.Load() ?? new List<Product>();
+            Sales = new List<Sale>();
         }
+
+
 
         #region FINANCIAL DATA (✧ω✧)
 
@@ -87,17 +93,22 @@ namespace CoffeeManager.Models.Class
         /// </summary>
         public void AddProduct(Product product)
         {
+            product.Id = Products.Count + 1;
             Products.Add(product);
+            ProductService.Save(Products);
             _notifications.NotifyProductCreated(product.Name);
         }
+
 
         /// <summary>
         /// Call this after editing a product to register an update notification. (✧ω✧)
         /// </summary>
         public void UpdateProduct(Product product)
         {
+            ProductService.Save(Products);
             _notifications.NotifyProductUpdated(product.Name);
         }
+
 
         /// <summary>
         /// Removes a product by ID. (ಠ‿ಠ)
@@ -108,8 +119,10 @@ namespace CoffeeManager.Models.Class
             if (p == null) return false;
 
             Products.Remove(p);
+            ProductService.Save(Products);
             return true;
         }
+
 
         /// <summary>
         /// Returns a product by ID. (◕‿◕✿)
@@ -232,8 +245,6 @@ namespace CoffeeManager.Models.Class
         }
 
 
-        TotalCost += saleCost;
-        }
 
         /// <summary>
         /// Returns a sale by ID. (ಠ‿ಠ)

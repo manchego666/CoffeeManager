@@ -6,7 +6,7 @@ namespace CoffeeManager.Models.Class
     /// Represents an employee working in the coffee shop.
     /// Extends User with job-related information. (✿◠‿◠) ZORRODEV2026
     /// </summary>
-    internal class Employee : User
+    public class Employee : User
     {
         #region DATA
 

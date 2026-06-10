@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents a single item inside a sale. (✿◠‿◠) ZORRODEV2026
     /// </summary>
-    internal class SaleDetail
+    public class SaleDetail
     {
         #region DATA (≧◡≦)
 

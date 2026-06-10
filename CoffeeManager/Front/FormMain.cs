@@ -1,13 +1,13 @@
+using CoffeeManager.Models.Class;
+using CoffeeManager.Services;
+using CoffeeManager.Services.Logic;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using CoffeeManager.Models.Class;
-using CoffeeManager.Services;
-using CoffeeManager.Services.Logic;
-
+using static System.Runtime.InteropServices.JavaScript.JSType;
 // Timer correcto
 using Timer = System.Windows.Forms.Timer;
 
@@ -18,7 +18,7 @@ namespace CoffeeManager.Front
         // ===========================================================
         //  REGION: DATA & SERVICES
         // ===========================================================
-        private readonly Store _store = new();
+        private Store _store;
         private readonly JsonService _jsonService = new();
         private readonly DailyReportService _dailyReportService = new();
         private readonly LoginService _loginService;
@@ -95,7 +95,7 @@ namespace CoffeeManager.Front
                 System.Reflection.BindingFlags.NonPublic,
                 null, panelContent, new object[] { true });
 
-            LoadStoreData();
+            _store = new Store();
             LoadDashboardModule();
         }
 
@@ -306,7 +306,7 @@ namespace CoffeeManager.Front
                 _store.Employees = _jsonService.Load<Employee>(PathService.Employees);
                 _store.Sales = _jsonService.Load<Sale>(PathService.Sales);
 
-                var warehouse = _jsonService.LoadObject<Warehouse>("Data/warehouse.json");
+                var warehouse = _jsonService.LoadObject<Warehouse>(PathService.Warehouse);
                 if (warehouse != null)
                     _store.Warehouse = warehouse;
             }
@@ -316,11 +316,42 @@ namespace CoffeeManager.Front
             }
         }
 
+
         // ===========================================================
         //  REGION: DASHBOARD MODULE (OPTIMIZADO)
         // ===========================================================
         private async void LoadDashboardModule()
         {
+            if (_store == null)
+            {
+                _store = new Store();
+            }
+
+            if (_store.Products == null)
+            {
+                _store.Products = new List<Product>();
+            }
+
+            if (_store.Employees == null)
+            {
+                _store.Employees = new List<Employee>();
+            }
+
+            if (_store.Sales == null)
+            {
+                _store.Sales = new List<Sale>();
+            }
+
+            if (_store.Warehouse == null)
+            {
+                _store.Warehouse = new Warehouse();
+            }
+
+            if (_store.Warehouse.Items == null)
+            {
+                _store.Warehouse.Items = new List<InventoryItem>();
+            }
+
             panelContent.Controls.Clear();
             panelContent.BackColor = Color.FromArgb(1, 0, 0, 0); // Transparencia falsa
 
@@ -583,41 +614,80 @@ namespace CoffeeManager.Front
         // ===========================================================
         private void CreateSubmenus()
         {
+            // ===========================================================
+            // 1) CREAR TODOS LOS PANELES PRIMERO (ANTES DE AddSubButton)
+            // ===========================================================
             panelSubEmployees = CreateSubmenuPanelBelow(btnEmployees);
+            panelSubWarehouse = CreateSubmenuPanelBelow(btnWarehouse);
+            panelSubProducts = CreateSubmenuPanelBelow(btnProducts);
+            panelSubSales = CreateSubmenuPanelBelow(btnSales);
+            panelSubReports = CreateSubmenuPanelBelow(btnReports);
+            panelSubSettings = CreateSubmenuPanelBelow(btnSettings);
+
+            // ===========================================================
+            // 2) AHORA SÍ AGREGAR BOTONES A CADA SUBMENÚ
+            // ===========================================================
+
+            // EMPLEADOS
             AddSubButton(panelSubEmployees, "Agregar empleado",
-             (s, e) => LoadModule(new UsersModule(_store)));
+                (s, e) => LoadModule(new UsersModule(_store)));
 
             AddSubButton(panelSubEmployees, "Administrar empleados",
                 (s, e) => LoadModule(new UsersPanelModule(_store)));
 
+            // ALMACÉN
+            AddSubButton(panelSubWarehouse, "Inventario",
+                (s, e) => LoadModule(new WareHouseModule(_store)));
 
+            AddSubButton(panelSubWarehouse, "Agregar insumo",
+                (s, e) => LoadModule(new WareHouseModule(_store)));
 
-            panelSubWarehouse = CreateSubmenuPanelBelow(btnWarehouse);
-            AddSubButton(panelSubWarehouse, "Inventario", (s, e) => LoadPlaceholder("Inventario"));
-            AddSubButton(panelSubWarehouse, "Agregar insumo", (s, e) => LoadPlaceholder("Agregar Insumo"));
-            AddSubButton(panelSubWarehouse, "Recetas", (s, e) => LoadPlaceholder("Recetas"));
+            AddSubButton(panelSubWarehouse, "Recetas",
+                (s, e) => LoadModule(new RecipeModule(_store)));
 
-            panelSubProducts = CreateSubmenuPanelBelow(btnProducts);
-            AddSubButton(panelSubProducts, "Agregar producto", (s, e) => LoadPlaceholder("Agregar Producto"));
-            AddSubButton(panelSubProducts, "Administrar productos", (s, e) => LoadPlaceholder("Administrar Productos"));
+            // PRODUCTOS
+            AddSubButton(panelSubProducts, "Agregar producto",
+                (s, e) => LoadModule(new ProductModule(_store)));
 
-            panelSubSales = CreateSubmenuPanelBelow(btnSales);
-            AddSubButton(panelSubSales, "Punto de venta", (s, e) => LoadPlaceholder("Punto de Venta"));
-            AddSubButton(panelSubSales, "Historial de ventas", (s, e) => LoadPlaceholder("Historial de Ventas"));
+            AddSubButton(panelSubProducts, "Administrar productos",
+                (s, e) => LoadModule(new ProductModule(_store)));
 
-            panelSubReports = CreateSubmenuPanelBelow(btnReports);
-            AddSubButton(panelSubReports, "Reporte de ventas", (s, e) => LoadPlaceholder("Reporte de Ventas"));
-            AddSubButton(panelSubReports, "Reporte de inventario", (s, e) => LoadPlaceholder("Reporte de Inventario"));
-            AddSubButton(panelSubReports, "Reporte de pérdidas", (s, e) => LoadPlaceholder("Reporte de Pérdidas"));
-            AddSubButton(panelSubReports, "Corte diario", (s, e) => GenerateDailyReport());
+            // VENTAS
+            AddSubButton(panelSubSales, "Punto de venta",
+                (s, e) => LoadModule(new SalesPOSModule(_store)));
 
-            panelSubSettings = CreateSubmenuPanelBelow(btnSettings);
-            AddSubButton(panelSubSettings, "Información del negocio", (s, e) => LoadPlaceholder("Información del Negocio"));
-            AddSubButton(panelSubSettings, "Cambiar contraseña", (s, e) => LoadPlaceholder("Cambiar Contraseña"));
-            AddSubButton(panelSubSettings, "Preferencias", (s, e) => LoadPlaceholder("Preferencias"));
+            AddSubButton(panelSubSales, "Historial de ventas",
+                (s, e) => LoadModule(new SalesHistoryModule(_store)));
 
+            // REPORTES
+            AddSubButton(panelSubReports, "Reporte de ventas",
+                (s, e) => LoadModule(new SalesHistoryModule(_store)));
+
+            AddSubButton(panelSubReports, "Reporte de inventario",
+                (s, e) => LoadModule(new WareHouseModule(_store)));
+
+            AddSubButton(panelSubReports, "Reporte de pérdidas",
+                (s, e) => LoadModule(new SalesHistoryModule(_store)));
+
+            AddSubButton(panelSubReports, "Corte diario",
+                (s, e) => GenerateDailyReport());
+
+            // CONFIGURACIÓN
+            AddSubButton(panelSubSettings, "Información del negocio",
+                (s, e) => LoadPlaceholder("Información del Negocio"));
+
+            AddSubButton(panelSubSettings, "Cambiar contraseña",
+                (s, e) => LoadPlaceholder("Cambiar Contraseña"));
+
+            AddSubButton(panelSubSettings, "Preferencias",
+                (s, e) => LoadPlaceholder("Preferencias"));
+
+            // OCULTAR TODO AL INICIO
             HideAllSubmenus();
         }
+
+
+
 
         private Panel CreateSubmenuPanelBelow(Button parent)
         {
@@ -669,6 +739,7 @@ namespace CoffeeManager.Front
             else submenu.Visible = false;
         }
 
+
         private void HideAllSubmenus()
         {
             if (panelSubEmployees != null) panelSubEmployees.Visible = false;
@@ -690,16 +761,20 @@ namespace CoffeeManager.Front
 
         private void ToggleMenu()
         {
-            if (isAnimating) return;
+            if (isMenuExpanded)
+            {
+                panelMenu.Width = MenuCollapsedWidth;
+                isMenuExpanded = false;
+            }
+            else
+            {
+                panelMenu.Width = MenuExpandedWidth;
+                isMenuExpanded = true;
+            }
 
-            isAnimating = true;
             HideAllSubmenus();
-
-            panelMenu.SuspendLayout();
-            panelContent.SuspendLayout();
-
-            slideTimer.Start();
         }
+
 
         private void SlideTick(object? sender, EventArgs e)
         {
@@ -745,12 +820,12 @@ namespace CoffeeManager.Front
                 AccessibleName = "Salir",
                 Tag = Properties.Resources.icon_exit,
                 Width = MenuExpandedWidth - 20,
-                Height = 40,
+                Height = 45,
                 Location = new Point(10, y),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(50, 50, 50),
-                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
 
@@ -762,7 +837,7 @@ namespace CoffeeManager.Front
                 pe.Graphics.SmoothingMode = SmoothingMode.HighQuality;
 
                 Image img = b.Tag as Image;
-                int iconSize = 32;
+                int iconSize = 50; //  ICONO MÁS GRANDE
                 int iconY = (b.Height - iconSize) / 2;
 
                 if (panelMenu.Width <= MenuCollapsedWidth)
@@ -778,18 +853,12 @@ namespace CoffeeManager.Front
                     int textX = iconX + iconSize + 12;
                     using (Brush brush = new SolidBrush(b.ForeColor))
                     {
-                        StringFormat sf = new StringFormat
-                        {
-                            LineAlignment = StringAlignment.Center,
-                            Alignment = StringAlignment.Near
-                        };
-
                         pe.Graphics.DrawString(
                             "Salir",
                             b.Font,
                             brush,
                             new Rectangle(textX, 0, b.Width - textX, b.Height),
-                            sf
+                            new StringFormat { LineAlignment = StringAlignment.Center }
                         );
                     }
                 }
@@ -799,6 +868,7 @@ namespace CoffeeManager.Front
 
             return btn;
         }
+
 
 
         // ===========================================================

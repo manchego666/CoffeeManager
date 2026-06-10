@@ -9,7 +9,6 @@ namespace CoffeeManager.Services.Data
     internal static class EmployeeService
     {
         private static readonly string FilePath = PathService.Employees;
-
         public static List<Employee> Load()
         {
             if (!File.Exists(FilePath))

@@ -19,8 +19,10 @@ namespace CoffeeManager.Services.Logic
     {
         private readonly JsonService _json = new();
 
+
         // TODO: move to PathService if you want central paths later.
-        private const string FilePath = "Data/notifications.json";
+        private static readonly string FilePath = PathService.Notifications;
+
 
         /// <summary>
         /// Loads all notifications from JSON.

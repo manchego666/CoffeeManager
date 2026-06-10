@@ -7,7 +7,7 @@ namespace CoffeeManager.Models.Class
     /// Base class representing a person registered in the system.
     /// Provides personal identity and contact information. (⁀ᗢ⁀) ZORRODEV2026
     /// </summary>
-    internal abstract class User
+    public abstract class User
     {
         #region DATA
 

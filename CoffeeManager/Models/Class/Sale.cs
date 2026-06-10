@@ -7,7 +7,7 @@ namespace CoffeeManager.Models.Class
     /// <summary>
     /// Represents a sale transaction in the coffee shop. (≧◡≦) ZORRODEV2026
     /// </summary>
-    internal class Sale
+    public class Sale
     {
         #region DATA
 

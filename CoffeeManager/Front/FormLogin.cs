@@ -424,9 +424,9 @@ namespace CoffeeManager.Front
             }
             catch (Exception ex)
             {
-                lblError.Text = "Error interno al validar login.";
-                Console.WriteLine(ex);
+                MessageBox.Show("ERROR LOGIN: " + ex.Message);
             }
+
         }
         #endregion
 

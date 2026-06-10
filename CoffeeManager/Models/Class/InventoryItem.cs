@@ -4,17 +4,18 @@
 //  Description: Stock logic, conversions and alerts. (≧◡≦)
 // ===============================================================
 
+using CoffeeManager.Models.Enums;
 using System;
+using System.Text.Json.Serialization;
 
 namespace CoffeeManager.Models.Class
 {
     /// <summary>
     /// Represents a warehouse item with professional packaging logic. (≧◡≦) ZORRODEV2026
     /// </summary>
-    internal class InventoryItem
+    public class InventoryItem
     {
         #region DATA
-
         public int Id { get; set; }
         public string Name { get; set; } = "";
 
@@ -26,8 +27,24 @@ namespace CoffeeManager.Models.Class
         /// <summary>
         /// Base unit (pcs, ml, g, kg). (≧◡≦)
         /// </summary>
-        public string Unit { get; set; } = "pcs";
+        [JsonIgnore]
+        public UnitType Unit { get; set; }
 
+        /// <summary>
+        /// JSON bridge for Unit (string ↔ enum). (≧◡≦)
+        /// </summary>
+        [JsonPropertyName("Unit")]
+        public string UnitJson
+        {
+            get => Unit.ToString();
+            set
+            {
+                if (!Enum.TryParse<UnitType>(value, true, out var parsed))
+                    parsed = UnitType.Piezas;
+
+                Unit = parsed;
+            }
+        }
         /// <summary>
         /// Cost per base unit. (≧◡≦)
         /// </summary>

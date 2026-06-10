@@ -6,7 +6,7 @@ namespace CoffeeManager.Models.Class
     /// Represents a product sold in the coffee shop.
     /// Handles pricing, stock, categories and warehouse-based recipes. (≧◡≦) ZORRODEV2026
     /// </summary>
-    internal class Product
+    public class Product
     {
         #region DATA
 
@@ -227,8 +227,6 @@ namespace CoffeeManager.Models.Class
             foreach (var ingredient in Recipe)
             {
                 var item = warehouse.GetItemById(ingredient.IngredientId);
-                var totalNeeded = ingredient.Quantity * quantity;
-
                 if (item == null)
                 {
                     if (ingredient.IsOptional)
@@ -238,19 +236,24 @@ namespace CoffeeManager.Models.Class
                     continue;
                 }
 
-                if (item.Quantity < totalNeeded)
-                {
-                    if (ingredient.IsOptional)
-                        warnings.Add($"Optional '{ingredient.IngredientName}' low. Continuing. (≧◡≦)");
-                    else
-                        warnings.Add($"'{ingredient.IngredientName}' will go negative. (╥﹏╥)");
-                }
+                // 🔥 CONVERSIÓN DE UNIDADES
+                decimal neededBase = UnitConverter.Convert(
+                    ingredient.Unit,
+                    item.Unit,
+                    ingredient.Quantity * quantity
+                );
 
-                warehouse.ConsumeById(ingredient.IngredientId, totalNeeded);
+                if (item.Quantity < neededBase && !ingredient.IsOptional)
+                    warnings.Add($"'{ingredient.IngredientName}' will go negative. (╥﹏╥)");
+
+                item.Consume(neededBase);
             }
 
             return warnings;
         }
+
+
+
 
         #endregion
     }

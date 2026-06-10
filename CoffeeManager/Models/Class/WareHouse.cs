@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CoffeeManager.Models.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,7 +9,7 @@ namespace CoffeeManager.Models.Class
     /// Represents the internal warehouse of the coffee shop.
     /// Stores consumables, tools and supplies. (✧ω✧) ZORRODEV2026
     /// </summary>
-    internal class Warehouse
+    public class Warehouse
     {
         #region DATA
 
@@ -27,6 +28,11 @@ namespace CoffeeManager.Models.Class
         /// </summary>
         public InventoryItem AddOrUpdateItem(string name, decimal quantity, string unit, decimal? costPerUnit = null)
         {
+            if (!Enum.TryParse<UnitType>(unit, true, out var parsedUnit))
+            {
+                parsedUnit = UnitType.Piezas;
+            }
+
             var item = Items.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
             if (item == null)
@@ -36,7 +42,7 @@ namespace CoffeeManager.Models.Class
                     Id = Items.Count + 1,
                     Name = name,
                     Quantity = quantity,
-                    Unit = unit,
+                    Unit = parsedUnit,   
                     CostPerUnit = costPerUnit ?? 0m,
                     LastUpdated = DateTime.Now
                 };
@@ -53,6 +59,7 @@ namespace CoffeeManager.Models.Class
 
             return item;
         }
+
 
         /// <summary>
         /// Consumes quantity from an item by name. Can go negative (debt). (ಠ‿ಠ)
