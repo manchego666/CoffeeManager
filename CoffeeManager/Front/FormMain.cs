@@ -53,7 +53,7 @@ namespace CoffeeManager.Front
         private bool isAnimating = false;
 
         private const int MenuExpandedWidth = 230;
-        private const int MenuCollapsedWidth = 60;
+        private const int MenuCollapsedWidth = 70;
         private const int AnimationStep = 40;
 
         // ===========================================================
@@ -78,7 +78,7 @@ namespace CoffeeManager.Front
             MinimumSize = new Size(1280, 800);
             Size = new Size(1366, 840);
 
-            // DoubleBuffer REAL
+            // DoubleBuffer del formulario
             SetStyle(ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
@@ -86,21 +86,16 @@ namespace CoffeeManager.Front
             DoubleBuffered = true;
             UpdateStyles();
 
-            InitializeLayout();
-            InitializeSlideTimer();
-
-            typeof(Panel).InvokeMember("DoubleBuffered",
-                System.Reflection.BindingFlags.SetProperty |
-                System.Reflection.BindingFlags.Instance |
-                System.Reflection.BindingFlags.NonPublic,
-                null, panelContent, new object[] { true });
+            InitializeLayout();      // aquí se crean panelMenu y panelContent
+            InitializeSlideTimer();  // solo si vas a usar animación
 
             _store = new Store();
             LoadDashboardModule();
         }
 
+
         // ===========================================================
-        //  REGION: INITIALIZE LAYOUT (OPTIMIZADO)
+        //  REGION: INITIALIZE LAYOUT 
         // ===========================================================
         private void InitializeLayout()
         {
@@ -219,7 +214,7 @@ namespace CoffeeManager.Front
             // BOTÓN SALIR
             // ============================
             btnExit = CreateExitButton(ref y);
-            panelMenu.Controls.Add(btnExit); 
+            panelMenu.Controls.Add(btnExit);
         }
 
 
@@ -249,38 +244,33 @@ namespace CoffeeManager.Front
                 pe.Graphics.SmoothingMode = SmoothingMode.HighQuality;
 
                 Image img = b.Tag as Image;
-                if (img != null)
+                if (img == null) return;
+
+                int iconSize = 28;
+                int iconY = (b.Height - iconSize) / 2;
+
+                bool collapsed = panelMenu.Width <= MenuCollapsedWidth;
+
+                if (collapsed)
                 {
-                    int iconSize = 32; // ICONOS GRANDES
-                    int iconY = (b.Height - iconSize) / 2;
+                    int iconX = (b.Width - iconSize) / 2;
+                    pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
+                }
+                else
+                {
+                    int iconX = 10;
+                    pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
 
-                    if (b.Width <= MenuCollapsedWidth)
+                    int textX = iconX + iconSize + 10;
+                    using (Brush brush = new SolidBrush(b.ForeColor))
                     {
-                        int iconX = (b.Width - iconSize) / 2;
-                        pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
-                    }
-                    else
-                    {
-                        int iconX = 12;
-                        pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
-
-                        int textX = iconX + iconSize + 12;
-                        using (Brush brush = new SolidBrush(b.ForeColor))
-                        {
-                            StringFormat sf = new StringFormat
-                            {
-                                LineAlignment = StringAlignment.Center,
-                                Alignment = StringAlignment.Near
-                            };
-
-                            pe.Graphics.DrawString(
-                                b.AccessibleName,
-                                b.Font,
-                                brush,
-                                new Rectangle(textX, 0, b.Width - textX, b.Height),
-                                sf
-                            );
-                        }
+                        pe.Graphics.DrawString(
+                            b.AccessibleName,
+                            b.Font,
+                            brush,
+                            new Rectangle(textX, 0, b.Width - textX, b.Height),
+                            new StringFormat { LineAlignment = StringAlignment.Center }
+                        );
                     }
                 }
             };
@@ -291,6 +281,7 @@ namespace CoffeeManager.Front
             y += 45;
             return btn;
         }
+
 
 
 
@@ -573,6 +564,27 @@ namespace CoffeeManager.Front
 
             return card;
         }
+        private void ResizeMenuButtons()
+        {
+            int newWidth = isMenuExpanded ? MenuExpandedWidth - 20 : MenuCollapsedWidth - 10;
+
+            foreach (Control ctrl in panelMenu.Controls)
+            {
+                if (ctrl is Button btn)
+                {
+                    btn.Width = newWidth;
+                }
+            }
+
+            // Reposicionar submenús
+            panelSubEmployees.Width = newWidth;
+            panelSubWarehouse.Width = newWidth;
+            panelSubProducts.Width = newWidth;
+            panelSubSales.Width = newWidth;
+            panelSubReports.Width = newWidth;
+            panelSubSettings.Width = newWidth;
+        }
+
 
         private void AddNotificationItem(Panel parent, string title, string detail, ref int y)
         {
@@ -659,28 +671,31 @@ namespace CoffeeManager.Front
             AddSubButton(panelSubSales, "Historial de ventas",
                 (s, e) => LoadModule(new SalesHistoryModule(_store)));
 
-            // REPORTES
             AddSubButton(panelSubReports, "Reporte de ventas",
-                (s, e) => LoadModule(new SalesHistoryModule(_store)));
+        (s, e) => LoadModule(new ReportsModule(_store)));
 
             AddSubButton(panelSubReports, "Reporte de inventario",
-                (s, e) => LoadModule(new WareHouseModule(_store)));
+                (s, e) => LoadModule(new ReportsModule(_store)));
 
             AddSubButton(panelSubReports, "Reporte de pérdidas",
-                (s, e) => LoadModule(new SalesHistoryModule(_store)));
+                (s, e) => LoadModule(new ReportsModule(_store)));
+
 
             AddSubButton(panelSubReports, "Corte diario",
                 (s, e) => GenerateDailyReport());
 
             // CONFIGURACIÓN
             AddSubButton(panelSubSettings, "Información del negocio",
-                (s, e) => LoadPlaceholder("Información del Negocio"));
+      (s, e) => LoadModule(new BusinessInfoModule()));
+
 
             AddSubButton(panelSubSettings, "Cambiar contraseña",
-                (s, e) => LoadPlaceholder("Cambiar Contraseña"));
+           (s, e) => LoadModule(new ChangePasswordModule()));
+
 
             AddSubButton(panelSubSettings, "Preferencias",
-                (s, e) => LoadPlaceholder("Preferencias"));
+      (s, e) => LoadModule(new PreferencesModule()));
+
 
             // OCULTAR TODO AL INICIO
             HideAllSubmenus();
@@ -755,62 +770,51 @@ namespace CoffeeManager.Front
         // ===========================================================
         private void InitializeSlideTimer()
         {
-            slideTimer = new Timer { Interval = 10 };
+            slideTimer = new Timer { Interval = 1 };
             slideTimer.Tick += SlideTick;
         }
 
         private void ToggleMenu()
         {
-            if (isMenuExpanded)
-            {
-                panelMenu.Width = MenuCollapsedWidth;
-                isMenuExpanded = false;
-            }
-            else
-            {
-                panelMenu.Width = MenuExpandedWidth;
-                isMenuExpanded = true;
-            }
-
+            isMenuExpanded = !isMenuExpanded;
+            panelMenu.Width = isMenuExpanded ? MenuExpandedWidth : MenuCollapsedWidth;
+            ResizeMenuButtons();
             HideAllSubmenus();
         }
 
 
+
+
+
+
         private void SlideTick(object? sender, EventArgs e)
         {
-            if (isMenuExpanded)
+            int target = isMenuExpanded ? MenuCollapsedWidth : MenuExpandedWidth;
+
+            int step = 12; // velocidad suave
+
+            if (panelMenu.Width != target)
             {
-                panelMenu.Width -= AnimationStep;
+                int direction = panelMenu.Width < target ? 1 : -1;
+                panelMenu.Width += direction * step;
 
-                if (panelMenu.Width <= MenuCollapsedWidth)
+                if ((direction == 1 && panelMenu.Width > target) ||
+                    (direction == -1 && panelMenu.Width < target))
                 {
-                    panelMenu.Width = MenuCollapsedWidth;
-                    isMenuExpanded = false;
-
-                    panelMenu.ResumeLayout();
-                    panelContent.ResumeLayout(true);
-
-                    slideTimer.Stop();
-                    isAnimating = false;
+                    panelMenu.Width = target;
                 }
+
+                ResizeMenuButtons();
+                return;
             }
-            else
-            {
-                panelMenu.Width += AnimationStep;
 
-                if (panelMenu.Width >= MenuExpandedWidth)
-                {
-                    panelMenu.Width = MenuExpandedWidth;
-                    isMenuExpanded = true;
-
-                    panelMenu.ResumeLayout();
-                    panelContent.ResumeLayout(true);
-
-                    slideTimer.Stop();
-                    isAnimating = false;
-                }
-            }
+            slideTimer.Stop();
+            isAnimating = false;
+            isMenuExpanded = !isMenuExpanded;
         }
+
+
+
 
         private Button CreateExitButton(ref int y)
         {
@@ -820,12 +824,12 @@ namespace CoffeeManager.Front
                 AccessibleName = "Salir",
                 Tag = Properties.Resources.icon_exit,
                 Width = MenuExpandedWidth - 20,
-                Height = 45,
+                Height = 40,
                 Location = new Point(10, y),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(50, 50, 50),
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
 
@@ -837,37 +841,40 @@ namespace CoffeeManager.Front
                 pe.Graphics.SmoothingMode = SmoothingMode.HighQuality;
 
                 Image img = b.Tag as Image;
-                int iconSize = 50; //  ICONO MÁS GRANDE
+                if (img == null) return;
+
+                bool collapsed = panelMenu.Width <= MenuCollapsedWidth;
+
+                int iconSize = 28;
                 int iconY = (b.Height - iconSize) / 2;
 
-                if (panelMenu.Width <= MenuCollapsedWidth)
+                if (collapsed)
                 {
                     int iconX = (b.Width - iconSize) / 2;
                     pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
                 }
                 else
                 {
-                    int iconX = 12;
+                    int iconX = 10;
                     pe.Graphics.DrawImage(img, iconX, iconY, iconSize, iconSize);
 
-                    int textX = iconX + iconSize + 12;
-                    using (Brush brush = new SolidBrush(b.ForeColor))
-                    {
-                        pe.Graphics.DrawString(
-                            "Salir",
-                            b.Font,
-                            brush,
-                            new Rectangle(textX, 0, b.Width - textX, b.Height),
-                            new StringFormat { LineAlignment = StringAlignment.Center }
-                        );
-                    }
+                    int textX = iconX + iconSize + 10;
+                    pe.Graphics.DrawString(
+                        b.AccessibleName,
+                        b.Font,
+                        Brushes.Black,
+                        new Rectangle(textX, 0, b.Width - textX, b.Height),
+                        new StringFormat { LineAlignment = StringAlignment.Center }
+                    );
                 }
             };
+
 
             btn.Click += (s, e) => Close();
 
             return btn;
         }
+
 
 
 
@@ -880,6 +887,7 @@ namespace CoffeeManager.Front
             module.Dock = DockStyle.Fill;
             panelContent.Controls.Add(module);
         }
+
 
         private void LoadPlaceholder(string text)
         {

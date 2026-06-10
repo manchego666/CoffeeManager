@@ -11,7 +11,12 @@ namespace CoffeeManager.Services.Logic
     {
         private readonly string _filePath;
 
-        #region === Constructor  ===
+        // ✔ Constructor vacío (para usar new LoginService())
+        public LoginService() : this(PathService.Login)
+        {
+        }
+
+        // ✔ Constructor real
         public LoginService(string filePath)
         {
             _filePath = filePath;
@@ -22,9 +27,8 @@ namespace CoffeeManager.Services.Logic
 
             EnsureLoginFileExists();
         }
-        #endregion
 
-        #region === Crear login.json si no existe ===
+        // ✔ Crear login.json si no existe
         private void EnsureLoginFileExists()
         {
             if (!File.Exists(_filePath))
@@ -39,13 +43,11 @@ namespace CoffeeManager.Services.Logic
                     Salt = Convert.ToBase64String(salt)
                 };
 
-                var json = JsonSerializer.Serialize(defaultLogin, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_filePath, json);
+                SaveLogin(defaultLogin);
             }
         }
-        #endregion
 
-        #region === Cargar login ===
+        // ✔ Cargar login
         public Login LoadLogin()
         {
             if (!File.Exists(_filePath))
@@ -54,14 +56,20 @@ namespace CoffeeManager.Services.Logic
             var json = File.ReadAllText(_filePath);
             return JsonSerializer.Deserialize<Login>(json) ?? new Login();
         }
-        #endregion
 
-        #region === Validar credenciales ===
+        // ✔ Guardar login
+        private void SaveLogin(Login login)
+        {
+            var json = JsonSerializer.Serialize(login, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_filePath, json);
+        }
+
+        // ✔ Validar usuario + contraseña
         public bool Validate(string user, string pass)
         {
             var login = LoadLogin();
 
-            if (login.Username != user)
+            if (!string.Equals(login.Username, user, StringComparison.OrdinalIgnoreCase))
                 return false;
 
             var salt = Convert.FromBase64String(login.Salt);
@@ -69,9 +77,30 @@ namespace CoffeeManager.Services.Logic
 
             return hash == login.PasswordHash;
         }
-        #endregion
 
-        #region === Hashing ===
+        // ✔ Validar SOLO contraseña actual
+        public bool ValidatePassword(string password)
+        {
+            var login = LoadLogin();
+            var salt = Convert.FromBase64String(login.Salt);
+            var hash = HashPassword(password, salt);
+
+            return hash == login.PasswordHash;
+        }
+
+        // ✔ Cambiar contraseña
+        public void ChangePassword(string newPassword)
+        {
+            var login = LoadLogin();
+
+            var salt = GenerateSalt();
+            login.Salt = Convert.ToBase64String(salt);
+            login.PasswordHash = HashPassword(newPassword, salt);
+
+            SaveLogin(login);
+        }
+
+        // ✔ Generar salt
         private byte[] GenerateSalt()
         {
             var salt = new byte[16];
@@ -79,6 +108,7 @@ namespace CoffeeManager.Services.Logic
             return salt;
         }
 
+        // ✔ Hash SHA256 + salt
         private string HashPassword(string password, byte[] salt)
         {
             using var sha = SHA256.Create();
@@ -92,6 +122,5 @@ namespace CoffeeManager.Services.Logic
             var hash = sha.ComputeHash(combined);
             return Convert.ToBase64String(hash);
         }
-        #endregion
     }
 }

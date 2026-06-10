@@ -25,6 +25,9 @@ namespace CoffeeManager.Models.Class
         /// </summary>
         public decimal Price { get; set; }
 
+        public string ImagePath { get; set; } = "";
+        public string Description { get; set; } = "";
+
         /// <summary>
         /// Current stock available. Used for bakery items and desserts. (≧◡≦)
         /// </summary>

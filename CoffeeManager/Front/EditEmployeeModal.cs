@@ -56,7 +56,7 @@ namespace CoffeeManager.Front
         {
             panelCard = new Panel
             {
-                Size = new Size(760, 540),
+                Size = new Size(700, 500),
                 BackColor = Color.FromArgb(235, 255, 255, 255),
                 Padding = new Padding(25)
             };

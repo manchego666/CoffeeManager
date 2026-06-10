@@ -42,6 +42,8 @@ namespace CoffeeManager.Models.Class
         /// Internal warehouse of the store. (≧◡≦)
         /// </summary>
         public Warehouse Warehouse { get; set; } = new();
+        public List<string> Categories { get; set; } = new();
+
 
         #endregion
 

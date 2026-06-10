@@ -20,7 +20,7 @@ namespace CoffeeManager.Models.Class
 
         #endregion
 
-        #region METHODS
+        #region ADD / UPDATE 
 
         /// <summary>
         /// Adds a new item or increases quantity if it already exists. (ง'̀-'́)ง
@@ -29,9 +29,7 @@ namespace CoffeeManager.Models.Class
         public InventoryItem AddOrUpdateItem(string name, decimal quantity, string unit, decimal? costPerUnit = null)
         {
             if (!Enum.TryParse<UnitType>(unit, true, out var parsedUnit))
-            {
                 parsedUnit = UnitType.Piezas;
-            }
 
             var item = Items.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
@@ -39,10 +37,10 @@ namespace CoffeeManager.Models.Class
             {
                 item = new InventoryItem
                 {
-                    Id = Items.Count + 1,
+                    Id = GetNextId(),
                     Name = name,
                     Quantity = quantity,
-                    Unit = parsedUnit,   
+                    Unit = parsedUnit,
                     CostPerUnit = costPerUnit ?? 0m,
                     LastUpdated = DateTime.Now
                 };
@@ -60,10 +58,10 @@ namespace CoffeeManager.Models.Class
             return item;
         }
 
+        #endregion
 
-        /// <summary>
-        /// Consumes quantity from an item by name. Can go negative (debt). (ಠ‿ಠ)
-        /// </summary>
+        #region CONSUME 
+
         public void Consume(string name, decimal quantity)
         {
             var item = Items.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -73,9 +71,6 @@ namespace CoffeeManager.Models.Class
             item.LastUpdated = DateTime.Now;
         }
 
-        /// <summary>
-        /// Consumes quantity from an item by Id. Can go negative (debt). (ಠ‿ಠ)
-        /// </summary>
         public void ConsumeById(int id, decimal quantity)
         {
             var item = Items.FirstOrDefault(x => x.Id == id);
@@ -85,20 +80,57 @@ namespace CoffeeManager.Models.Class
             item.LastUpdated = DateTime.Now;
         }
 
-        /// <summary>
-        /// Returns an item by name. (◕‿◕✿)
-        /// </summary>
+        #endregion
+
+        #region GETTERS 
+
         public InventoryItem? GetItem(string name)
         {
             return Items.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
-        /// <summary>
-        /// Returns an item by Id. (◕‿◕✿)
-        /// </summary>
         public InventoryItem? GetItemById(int id)
         {
             return Items.FirstOrDefault(x => x.Id == id);
+        }
+
+        #endregion
+
+        #region NEW METHODS 
+
+        /// <summary>
+        /// Returns the next available ID. (◕‿◕✿)
+        /// </summary>
+        public int GetNextId()
+        {
+            return Items.Count == 0 ? 1 : Items.Max(i => i.Id) + 1;
+        }
+
+        /// <summary>
+        /// Removes an item by ID. (ಥ﹏ಥ)
+        /// </summary>
+        public void RemoveItem(int id)
+        {
+            var item = Items.FirstOrDefault(i => i.Id == id);
+            if (item != null)
+                Items.Remove(item);
+        }
+
+        /// <summary>
+        /// Updates an existing item. (≧◡≦)
+        /// </summary>
+        public void UpdateItem(InventoryItem updated)
+        {
+            var item = Items.FirstOrDefault(i => i.Id == updated.Id);
+            if (item == null) return;
+
+            item.Name = updated.Name;
+            item.Quantity = updated.Quantity;
+            item.Unit = updated.Unit;
+            item.CostPerUnit = updated.CostPerUnit;
+            item.UnitsPerPackage = updated.UnitsPerPackage;
+            item.PackagesPerBox = updated.PackagesPerBox;
+            item.LastUpdated = updated.LastUpdated;
         }
 
         #endregion
